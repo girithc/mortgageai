@@ -2,6 +2,6 @@
 
 # How to run website
 
-cd website
-pnpm install 
-pnpm run dev
+cd website <br>
+pnpm install <br>
+pnpm run dev <br>
