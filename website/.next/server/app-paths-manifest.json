@@ -1,4 +1,8 @@
 {
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/_not-found/page": "app/_not-found/page.js",
   "/rate-sheet/page": "app/rate-sheet/page.js",
-  "/auth/page": "app/auth/page.js"
+  "/applications/page": "app/applications/page.js",
+  "/auth/page": "app/auth/page.js",
+  "/profile/page": "app/profile/page.js"
 }
