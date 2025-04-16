@@ -1,5 +1,5 @@
 import requests
-from backend.app.db.config import Config
+from config import Config
 
 from langchain_astradb import AstraDBVectorStore
 from langchain_core.documents import Document

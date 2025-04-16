@@ -1,6 +1,6 @@
 import os
 from astrapy import DataAPIClient, Database
-from backend.app.db.config import Config
+from config import Config
 
 def connect_to_database() -> Database:
     """
