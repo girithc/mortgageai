@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, render_template
 from app.db.db_upload_unstructured import handle_file_upload
 from app.db.db_prompt_query import get_query_response
+from app.db.astra_db_rate_sheets_query import get_rate_sheets_response
 
 main = Blueprint('main', __name__)
 
@@ -46,3 +47,18 @@ def query_llm():
         return jsonify({'answer': answer})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+@main.route('/llm/rate-sheets/query', methods=['POST'])
+def rate_sheet_query():
+    data = request.get_json()
+    question = data.get("question")
+
+    if not question:
+        return jsonify({"error": "Missing 'question' field in request body"}), 400
+
+    try:
+        answer = get_rate_sheets_response(question)
+        return jsonify({'answer': answer})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
