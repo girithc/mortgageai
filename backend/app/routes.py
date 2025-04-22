@@ -2,7 +2,8 @@ from flask import Blueprint, request, jsonify, render_template
 from app.db.db_upload_unstructured import handle_file_upload
 from app.db.db_prompt_query import get_query_response
 from app.db.astra_db_rate_sheets_query import get_rate_sheets_response
-from app.gpt.gpt_classify_income import classify_and_extract_income
+from app.gpt.gpt_classify_income import classify_and_extract_income_from_text
+from app.util.extract_text import extract_text_from_pdf
 
 main = Blueprint('main', __name__)
 
@@ -37,12 +38,11 @@ def upload_file():
 def classify_income_file():
     try:
         file = request.files.get('file')
-
         if not file:
             return jsonify({"error": "Missing file"}), 400
 
-        # Pass the file stream directly to the classification function
-        doc_type, income = classify_and_extract_income(file)
+        text = extract_text_from_pdf(file)
+        doc_type, income = classify_and_extract_income_from_text(text)
 
         return jsonify({
             "document_type": doc_type,
