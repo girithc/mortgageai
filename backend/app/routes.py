@@ -5,21 +5,16 @@ from app.db.astra_db_rate_sheets_query import get_rate_sheets_response
 from app.gpt.gpt_classify_income import classify_and_extract_income_from_text
 from app.util.extract_text import extract_text_from_pdf
 from app.models.user import User
+from app.util.llm_prompt_maker import rate_sheets_recommendation_prompt
 
 main = Blueprint('main', __name__)
 
+# Home route that renders the index page with dynamic content
 @main.route('/')
 def index():
     return render_template('index.html', title='Home', heading='Hello Flask!', message='This is dynamic content.')
 
-@main.route('/about')
-def about():
-    return render_template('about.html', title='About', heading='About Flask', message='This is the about page.')
-
-@main.route('/contact')
-def contact():
-    return render_template('contact.html', title='Contact', heading='Contact Us', message='This is the contact page.')
-
+# API route to upload a file and associate it with a database collection
 @main.route('/file/upload', methods=['POST'])
 def upload_file():
     try:
@@ -35,6 +30,7 @@ def upload_file():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
+# API route to classify a file (e.g., pay stub) and extract yearly income
 @main.route('/file/income/classify', methods=['POST'])
 def classify_income_file():
     try:
@@ -53,6 +49,7 @@ def classify_income_file():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
+# API route to query the LLM with a question and collection name
 @main.route('/llm/query', methods=['POST'])
 def query_llm():
     data = request.get_json()
@@ -69,6 +66,7 @@ def query_llm():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     
+# API route to query rate sheets using the LLM
 @main.route('/llm/rate-sheets/query', methods=['POST'])
 def rate_sheet_query():
     data = request.get_json()
@@ -83,6 +81,7 @@ def rate_sheet_query():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     
+# API route to create a new user
 @main.route('/user/create', methods=['POST'])
 def create_user():
     data = request.get_json()
@@ -110,6 +109,7 @@ def create_user():
     except Exception as e:      
         return jsonify({'error': str(e)}), 500
     
+# API route to retrieve user details by username
 @main.route('/user/get', methods=['GET'])
 def get_user():
     username = request.args.get('username')
@@ -129,6 +129,7 @@ def get_user():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     
+# API route to update user details
 @main.route('/user/update', methods=['POST'])
 def update_user():
     data = request.get_json()
@@ -158,6 +159,7 @@ def update_user():
     except Exception as e:      
         return jsonify({'error': str(e)}), 500
     
+# API route to add a new client to a user
 @main.route('/user/client/add', methods=['POST'])
 def add_client():
     data = request.get_json()
@@ -190,6 +192,7 @@ def add_client():
     except Exception as e:      
         return jsonify({'error': str(e)}), 500
     
+# API route to update a client's details
 @main.route('/user/client/update', methods=['POST'])
 def update_client():
     data = request.get_json()
@@ -218,6 +221,7 @@ def update_client():
     except Exception as e:      
         return jsonify({'error': str(e)}), 500
 
+# API route to retrieve a specific client's details
 @main.route('/user/client/get', methods=['GET'])
 def get_client():
     username = request.args.get('username')
@@ -238,6 +242,80 @@ def get_client():
         return jsonify({
             "username": user.username,
             "client": client.to_dict()
+        }), 200
+    except Exception as e:      
+        return jsonify({'error': str(e)}), 500
+    
+# API route to read income from a file and update a client's income
+@main.route('/user/client/read-income', methods=['POST'])
+def read_client_income():
+    username = request.form['username']
+    client_name = request.form['client_name']
+    index = request.form.get('index')
+    file = request.files.get('file')
+   
+    if not file:
+        return jsonify({"error": "Missing file"}), 400
+
+    if not username or not client_name:
+        return jsonify({'error': 'Missing username or client_name'}), 400
+
+    try:
+        user = User.get_user_by_username(username)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        client = next((c for c in user.clients if c.name == client_name), None)
+        if not client:
+            return jsonify({'error': 'Client not found'}), 404
+
+        text = extract_text_from_pdf(file)
+        doc_type, income = classify_and_extract_income_from_text(text)
+
+        if income is None:
+            return jsonify({'error': 'Income could not be extracted'}), 400
+
+        user.update_client(client_name, index=int(index), new_income=float(income))
+        User.save_user(user)
+
+        return jsonify({
+            "username": user.username,
+            "client": client.to_dict(),
+            "read_doc_type": doc_type
+        }), 200
+    except Exception as e:      
+        return jsonify({'error': str(e)}), 500
+    
+# API route to get a recommendation for a client based on their credit score and income
+@main.route('/user/client/recommendation', methods=['GET'])
+def get_client_recommendation():
+    username = request.args.get('username')
+    client_name = request.args.get('client_name')
+
+    if not username or not client_name:
+        return jsonify({'error': 'Missing username or client_name'}), 400
+
+    try:
+        user = User.get_user_by_username(username)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        client = next((c for c in user.clients if c.name == client_name), None)
+        if not client:
+            return jsonify({'error': 'Client not found'}), 404
+        
+        if client.credit_score == 0:
+            return jsonify({'error': 'Client has no credit score'}), 400
+        if not client.income_sources or all(income == 0 for income in client.income_sources):
+            return jsonify({'error': 'Client has no income sources'}), 400
+
+        # Placeholder for recommendation logic
+        recommendation = get_rate_sheets_response(rate_sheets_recommendation_prompt(client.credit_score, client.total_income))
+
+        return jsonify({
+            "username": user.username,
+            "client": client.to_dict(),
+            "recommendation": recommendation
         }), 200
     except Exception as e:      
         return jsonify({'error': str(e)}), 500
