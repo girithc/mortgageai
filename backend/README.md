@@ -26,7 +26,7 @@ Endpoint Info:
 - Method: POST
 - URL: http://127.0.0.1:5000/file/upload?collection_name=my_collection
 - Query Parameter:
-    - collection_name=my_collection
+    - collection_name={insert_collection_name}
 
 Request Body:
 - Select Body tab.
@@ -56,7 +56,7 @@ Request Body:
 ```
 {
   "question": "{Insert question here}",
-  "collection_name": "my_collection"
+  "collection_name": "{insert_collection_name}"
 }
 ```
 
