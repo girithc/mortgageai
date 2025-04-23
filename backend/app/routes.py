@@ -4,6 +4,7 @@ from app.db.db_prompt_query import get_query_response
 from app.db.astra_db_rate_sheets_query import get_rate_sheets_response
 from app.gpt.gpt_classify_income import classify_and_extract_income_from_text
 from app.util.extract_text import extract_text_from_pdf
+from app.models.user import User
 
 main = Blueprint('main', __name__)
 
@@ -82,3 +83,161 @@ def rate_sheet_query():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     
+@main.route('/user/create', methods=['POST'])
+def create_user():
+    data = request.get_json()
+    username = data.get('username')
+    name = data.get('name')
+
+    if not username or not name:
+        return jsonify({'error': 'Missing username or name'}), 400
+    
+    try:
+        # Check if user already exists
+        existing_user = User.get_user_by_username(username)
+        if existing_user:
+            return jsonify({'error': 'User already exists'}), 400
+        
+        # Create new user
+        user = User(username=username, name=name)
+        User.save_user(user)
+        return jsonify({
+            "message": "User created successfully",
+            "username": user.username,
+            "name": user.name,
+            "clients": [c.to_dict() for c in user.clients] if user.clients else None
+        }), 201
+    except Exception as e:      
+        return jsonify({'error': str(e)}), 500
+    
+@main.route('/user/get', methods=['GET'])
+def get_user():
+    username = request.args.get('username')
+    if not username:
+        return jsonify({'error': 'Missing username parameter'}), 400
+
+    try:
+        user = User.get_user_by_username(username)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        return jsonify({
+            "username": user.username,
+            "name": user.name,
+            "clients": [c.to_dict() for c in user.clients] if user.clients else None
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+@main.route('/user/update', methods=['POST'])
+def update_user():
+    data = request.get_json()
+    username = data.get('username')
+    name = data.get('name', None)
+
+    if not username:
+    
+        return jsonify({'error': 'Missing username'}), 400
+
+    try:
+        user = User.get_user_by_username(username)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        if name:
+            user.name = name
+        
+        User.save_user(user)
+
+        return jsonify({
+            "message": "User updated successfully",
+            "username": user.username,
+            "name": user.name,
+            "clients": [c.to_dict() for c in user.clients] if user.clients else None
+        }), 200
+    except Exception as e:      
+        return jsonify({'error': str(e)}), 500
+    
+@main.route('/user/client/add', methods=['POST'])
+def add_client():
+    data = request.get_json()
+    username = data.get('username')
+    client_name = data.get('client_name')
+    credit_score = data.get('credit_score', 0)
+    income_sources = data.get('income_sources', [0.0] * 5)
+
+    if not username or not client_name:
+        return jsonify({'error': 'Missing username or client_name'}), 400
+
+    try:
+        user = User.get_user_by_username(username)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        # Check if client already exists
+        existing_client = next((c for c in user.clients if c.name == client_name), None)
+        if existing_client:
+            return jsonify({'error': 'Client already exists'}), 400
+        
+        # Add new client
+        user.add_client(client_name, credit_score, income_sources)
+        User.save_user(user)
+
+        return jsonify({
+            "message": "Client added successfully",
+            "username": user.username,
+            "clients": [c.to_dict() for c in user.clients] if user.clients else None
+        }), 201
+    except Exception as e:      
+        return jsonify({'error': str(e)}), 500
+    
+@main.route('/user/client/update', methods=['POST'])
+def update_client():
+    data = request.get_json()
+    username = data.get('username')
+    client_name = data.get('client_name')
+    credit_score = data.get('credit_score', None)
+    new_income = data.get('new_income', None)
+    index = data.get('index', None)
+
+    if not username or not client_name:
+        return jsonify({'error': 'Missing username or client_name'}), 400
+
+    try:
+        user = User.get_user_by_username(username)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        user.update_client(client_name, credit_score, index, new_income)
+        User.save_user(user)
+
+        return jsonify({
+            "message": "Client updated successfully",
+            "username": user.username,
+            "clients": [c.to_dict() for c in user.clients] if user.clients else None
+        }), 200
+    except Exception as e:      
+        return jsonify({'error': str(e)}), 500
+
+@main.route('/user/client/get', methods=['GET'])
+def get_client():
+    username = request.args.get('username')
+    client_name = request.args.get('client_name')
+
+    if not username or not client_name:
+        return jsonify({'error': 'Missing username or client_name'}), 400
+
+    try:
+        user = User.get_user_by_username(username)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        client = next((c for c in user.clients if c.name == client_name), None)
+        if not client:
+            return jsonify({'error': 'Client not found'}), 404
+
+        return jsonify({
+            "username": user.username,
+            "client": client.to_dict()
+        }), 200
+    except Exception as e:      
+        return jsonify({'error': str(e)}), 500
