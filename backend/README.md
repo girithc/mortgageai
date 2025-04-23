@@ -19,7 +19,7 @@
 ### 4. Access the API
 http://127.0.0.1:5000/{path}
 
-## Testing API (with Postman)
+## Testing API Samples (with Postman)
 
 ### 1. Upload unstructured file to AstraDB
 Endpoint Info:
@@ -66,3 +66,21 @@ Sample Response (200 OK):
   "answer": "{LLM generated answer here}"
 }
 ```
+
+## Some relevant API endpoints for typical workflow
+Read `app/routes.py` for implementation details.
+
+### 1. Create new user to store in database
+`/user/create`
+
+### 2. Add a new client to user
+`/user/client/add`
+
+### 3. Update client's credit score or manually update income
+`/user/client/update`
+
+### 4. Automatically update client's income via file upload (using LLM)
+`/user/client/read-income`
+
+### 5. Get mortgage loan recommendation for a client (using LLM)
+`/user/client/recommendation`
