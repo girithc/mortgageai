@@ -20,7 +20,7 @@ def extract_readable_text(response_text: str) -> str:
     except (KeyError, IndexError, json.JSONDecodeError) as e:
         return f"Error extracting message: {e}"
 
-def get_rate_sheets_response(question: str) -> str:    
+def get_rate_sheets_response(question: str) -> str:
     # The complete API endpoint URL for this flow
     url = f"https://api.langflow.astra.datastax.com/lf/c3890dd0-1752-4e3e-b307-bf65a9be05ba/api/v1/run/d19044c0-94d8-44b8-9bef-9309849d15a8"  
 

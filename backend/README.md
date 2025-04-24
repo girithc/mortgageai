@@ -76,11 +76,11 @@ Read `app/routes.py` for implementation details.
 ### 2. Add a new client to user
 `/user/client/add`
 
-### 3. Update client's credit score or manually update income
-`/user/client/update`
-
-### 4. Automatically update client's income via file upload (using LLM)
+### 3. Automatically update client's income via file upload (using LLM)
 `/user/client/read-income`
 
-### 5. Get mortgage loan recommendation for a client (using LLM)
+### 4. Automatically update client's credit score, fico score, expenses via file upload (using LLM)
+`/user/client/read-credit-report`
+
+### 5. Finally, get mortgage loan recommendation for a client (using LLM)
 `/user/client/recommendation`
