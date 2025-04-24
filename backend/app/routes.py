@@ -336,6 +336,7 @@ def read_client_credit_report():
     except Exception as e:      
         return jsonify({'error': str(e)}), 500
     
+# API route to extract credit report information from a file
 @main.route('/file/credit-report/extract', methods=['POST'])
 def extract_credit_report():
     try:
