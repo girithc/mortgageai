@@ -1,3 +1,2 @@
-username,user_name,client_name,credit_score,income1,income2,income3,income4,income5,total_income
-johndoe,John Doe,Jane Smith,750,20000.0,40000.0,60000.0,0.0,37440.0,157440.0
-johndoe01,John Doe Jr.,Jane Smith Jr.,650,45000.0,0.0,0.0,0.0,0.0,45000.0
+username,user_name,client_name,credit_score,fico_score,dti_ratio,monthly_expenses,income1,income2,income3,income4,income5,total_income
+janesmith,Jane Smith,John Doe,609,0,10.655021834061134,732.0,45000.0,0.0,0.0,37440.0,0.0,82440.0

@@ -6,6 +6,7 @@ from app.gpt.gpt_classify_income import classify_and_extract_income_from_text
 from app.util.extract_text import extract_text_from_pdf
 from app.models.user import User
 from app.util.llm_prompt_maker import rate_sheets_recommendation_prompt
+from app.gpt.gpt_extract_credit import extract_credit_from_text
 
 main = Blueprint('main', __name__)
 
@@ -165,6 +166,9 @@ def add_client():
     data = request.get_json()
     username = data.get('username')
     client_name = data.get('client_name')
+    fico_score = data.get('fico_score', 0)
+    dti_ratio = data.get('dti_ratio', 0.0)
+    monthly_expenses = data.get('monthly_expenses', 0.0)
     credit_score = data.get('credit_score', 0)
     income_sources = data.get('income_sources', [0.0] * 5)
 
@@ -181,7 +185,7 @@ def add_client():
             return jsonify({'error': 'Client already exists'}), 400
         
         # Add new client
-        user.add_client(client_name, credit_score, income_sources)
+        user.add_client(client_name, credit_score, fico_score, dti_ratio, monthly_expenses, income_sources)
         User.save_user(user)
 
         return jsonify({
@@ -199,6 +203,9 @@ def update_client():
     username = data.get('username')
     client_name = data.get('client_name')
     credit_score = data.get('credit_score', None)
+    fico_score = data.get('fico_score', None)
+    dti_ratio = data.get('dti_ratio', None)
+    monthly_expenses = data.get('monthly_expenses', None)
     new_income = data.get('new_income', None)
     index = data.get('index', None)
 
@@ -210,7 +217,7 @@ def update_client():
         if not user:
             return jsonify({'error': 'User not found'}), 404
 
-        user.update_client(client_name, credit_score, index, new_income)
+        user.update_client(client_name, credit_score, fico_score, dti_ratio, monthly_expenses, index, new_income)
         User.save_user(user)
 
         return jsonify({
@@ -285,6 +292,66 @@ def read_client_income():
         }), 200
     except Exception as e:      
         return jsonify({'error': str(e)}), 500
+
+# API route to read a credit report from a file and update a client's credit score, fico score, monthly expenses, and DTI ratio
+@main.route('/user/client/read-credit-report', methods=['POST'])
+def read_client_credit_report():
+    username = request.form['username']
+    client_name = request.form['client_name']
+    file = request.files.get('file')
+
+    if not file:
+        return jsonify({"error": "Missing file"}), 400
+
+    if not username or not client_name:
+        return jsonify({'error': 'Missing username or client_name'}), 400
+
+    try:
+        user = User.get_user_by_username(username)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        client = next((c for c in user.clients if c.name == client_name), None)
+        if not client:
+            return jsonify({'error': 'Client not found'}), 404
+
+        text = extract_text_from_pdf(file)
+        credit_score, fico_score, monthly_expenses = extract_credit_from_text(text)
+
+        if credit_score != "Unknown":
+            user.update_client(client_name, credit_score=int(credit_score))
+        else:
+            return jsonify({'error': 'Credit score could not be extracted'}), 400
+        if fico_score != "Unknown":
+            user.update_client(client_name, fico_score=int(fico_score))
+        if monthly_expenses != "Unknown":
+            user.update_client(client_name, monthly_expenses=float(monthly_expenses))
+
+        User.save_user(user)
+
+        return jsonify({
+            "username": user.username,
+            "client": client.to_dict(),
+        }), 200
+    except Exception as e:      
+        return jsonify({'error': str(e)}), 500
+    
+@main.route('/file/credit-report/extract', methods=['POST'])
+def extract_credit_report():
+    try:
+        file = request.files.get('file')
+        if not file:
+            return jsonify({"error": "Missing file"}), 400
+
+        text = extract_text_from_pdf(file)
+        credit_score,fico_score,monthly_expenses = extract_credit_from_text(text)
+        return jsonify({
+            "credit_score": credit_score,
+            "fico_score": fico_score,
+            "monthly_expenses": monthly_expenses
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
     
 # API route to get a recommendation for a client based on their credit score and income
 @main.route('/user/client/recommendation', methods=['GET'])
@@ -306,11 +373,16 @@ def get_client_recommendation():
         
         if client.credit_score == 0:
             return jsonify({'error': 'Client has no credit score'}), 400
+        if client.dti_ratio == 0:
+            return jsonify({'error': 'Client has no DTI ratio'}), 400
         if not client.income_sources or all(income == 0 for income in client.income_sources):
             return jsonify({'error': 'Client has no income sources'}), 400
 
-        # Placeholder for recommendation logic
-        recommendation = get_rate_sheets_response(rate_sheets_recommendation_prompt(client.credit_score, client.total_income))
+        recommendation = get_rate_sheets_response(rate_sheets_recommendation_prompt(
+            credit_score=client.credit_score, 
+            fico_score=client.fico_score if client.fico_score != 0 else "Unknown",
+            dti_ratio=client.dti_ratio, 
+            income=client.total_income))
 
         return jsonify({
             "username": user.username,
@@ -319,3 +391,4 @@ def get_client_recommendation():
         }), 200
     except Exception as e:      
         return jsonify({'error': str(e)}), 500
+    
