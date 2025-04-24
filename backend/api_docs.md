@@ -129,6 +129,9 @@ This document outlines all available API endpoints, their request parameters, an
   "username": "<username>",
   "client_name": "<client>",
   "credit_score": 720,
+  "fico_score": 0,
+  "dti_ratio": 0.0,
+  "monthly_expenses": 0.0,
   "income_sources": [10000, 5000, 0, 0, 0]
 }
 ```
@@ -151,6 +154,9 @@ This document outlines all available API endpoints, their request parameters, an
   "username": "<username>",
   "client_name": "<client>",
   "credit_score": 730,
+  "fico_score": 0,
+  "dti_ratio": 0.0,
+  "monthly_expenses": 0.0,
   "index": 0,
   "new_income": 12000
 }
@@ -196,7 +202,38 @@ This document outlines all available API endpoints, their request parameters, an
 
 ---
 
-## **13. Get Client Recommendation**
+## **13. Read Credit Report for Client**
+**POST /user/client/read-credit-report**
+- **Parameters (form-data)**:
+  - `file`: PDF credit report document (required)
+  - `username`: associated user (required)
+  - `client_name`: client to update (required)
+- **Response**:
+```json
+{
+  "username": "<username>",
+  "client": { ... }
+}
+```
+
+---
+
+## **14. Extract Credit Report**
+**POST /file/credit-report/extract**
+- **Parameters (form-data)**:
+  - `file`: PDF credit report document (required)
+- **Response**:
+```json
+{
+  "credit_score": "<credit score>",
+  "fico_score": "<fico score>",
+  "monthly_expenses": "<monthly expenses>"
+}
+```
+
+---
+
+## **15. Get Client Recommendation**
 **GET /user/client/recommendation?username=xxx&client_name=yyy**
 - **Response**:
 ```json
