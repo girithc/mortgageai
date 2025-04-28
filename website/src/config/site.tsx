@@ -32,5 +32,9 @@ export const navigations: Navigation[] = [
   {
     icon: MessagesSquare,
     name: "Auth",
-    href: "/auth",}
-];
+    href: "/auth",},
+  {
+    icon: MessagesSquare,
+    name: "Loan Details",
+    href: "/loan-details",
+  }];
