@@ -1,5 +1,6 @@
 import os
 import csv
+from typing import Optional
 import boto3
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
@@ -45,6 +46,7 @@ def ensure_user_table_exists():
         raise RuntimeError("AWS credentials not found; cannot create DynamoDB table.")
     except ClientError as e:
         raise RuntimeError(f"Error creating DynamoDB table '{USER_TABLE}': {e}")
+
 class User:
     def __init__(self, username, name, client_names=None):
         self.username = username
@@ -100,3 +102,5 @@ class User:
         except ClientError as e:
             print(f"Error scanning users table: {e}")
             return []
+
+

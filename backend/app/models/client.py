@@ -1,7 +1,7 @@
 # Moved the Client class to this file from user.py
 import os
 import boto3
-from botocore.exceptions import ClientError
+from botocore.exceptions import ClientError, NoCredentialsError
 from dotenv import load_dotenv
 from decimal import Decimal
 
@@ -15,6 +15,44 @@ dynamodb = boto3.resource(
 )
 
 CLIENT_TABLE = 'MortgageAI_Clients'
+
+def ensure_client_table_exists():
+    """
+    Checks for the MortgageAI_Clients table in DynamoDB.
+    If it doesn't exist, creates it with composite key:
+      • PK: user_username (S)
+      • SK: name (S)
+    Other attributes are schemaless.
+    """
+    client = dynamodb.meta.client
+    try:
+        resp = client.describe_table(TableName=CLIENT_TABLE)
+        status = resp['Table']['TableStatus']
+        print(f">>> DynamoDB table '{CLIENT_TABLE}' already exists (status={status}).")
+        return
+    except client.exceptions.ResourceNotFoundException:
+        print(f">>> DynamoDB table '{CLIENT_TABLE}' not found. Creating...")
+    try:
+        table = dynamodb.create_table(
+            TableName=CLIENT_TABLE,
+            KeySchema=[
+                {'AttributeName': 'user_username', 'KeyType': 'HASH'},  # Partition key
+                {'AttributeName': 'name',          'KeyType': 'RANGE'}  # Sort key
+            ],
+            AttributeDefinitions=[
+                {'AttributeName': 'user_username', 'AttributeType': 'S'},
+                {'AttributeName': 'name',          'AttributeType': 'S'}
+            ],
+            BillingMode='PAY_PER_REQUEST'
+        )
+        table.wait_until_exists()
+        print(f">>> DynamoDB table '{CLIENT_TABLE}' created and active.")
+    except NoCredentialsError:
+        raise RuntimeError("AWS credentials not found; cannot create DynamoDB table.")
+    except ClientError as e:
+        raise RuntimeError(f"Error creating DynamoDB table '{CLIENT_TABLE}': {e}")
+
+
 
 class Client:
     def __init__(self, name, user_username, credit_score=0, fico_score=0, dti_ratio=0.0, monthly_expenses=0.0, income_sources=None):

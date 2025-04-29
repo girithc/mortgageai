@@ -104,6 +104,7 @@ def create_user():
 
     return jsonify({'message': 'User created successfully'}), 201
 
+# API route to retrieve all users
 @main.route('/user/all', methods=['GET'])
 def get_all_users():
     try:
