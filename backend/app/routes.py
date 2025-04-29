@@ -5,6 +5,7 @@ from app.db.astra_db_rate_sheets_query import get_rate_sheets_response
 from app.gpt.gpt_classify_income import classify_and_extract_income_from_text
 from app.util.extract_text import extract_text_from_pdf
 from app.models.user import User
+from app.models.client import Client
 from app.util.llm_prompt_maker import rate_sheets_recommendation_prompt
 from app.gpt.gpt_extract_credit import extract_credit_from_text
 
@@ -91,25 +92,18 @@ def create_user():
 
     if not username or not name:
         return jsonify({'error': 'Missing username or name'}), 400
-    
-    try:
-        # Check if user already exists
-        existing_user = User.get_user_by_username(username)
-        if existing_user:
-            return jsonify({'error': 'User already exists'}), 400
-        
-        # Create new user
-        user = User(username=username, name=name)
-        User.save_user(user)
-        return jsonify({
-            "message": "User created successfully",
-            "username": user.username,
-            "name": user.name,
-            "clients": [c.to_dict() for c in user.clients] if user.clients else None
-        }), 201
-    except Exception as e:      
-        return jsonify({'error': str(e)}), 500
-    
+
+    # Check if user already exists
+    existing_user = User.load_from_dynamodb(username)
+    if existing_user:
+        return jsonify({'error': 'User already exists'}), 400
+
+    # Create new user
+    user = User(username=username, name=name)
+    user.save_to_dynamodb()
+
+    return jsonify({'message': 'User created successfully'}), 201
+
 # API route to retrieve user details by username
 @main.route('/user/get', methods=['GET'])
 def get_user():
@@ -118,14 +112,14 @@ def get_user():
         return jsonify({'error': 'Missing username parameter'}), 400
 
     try:
-        user = User.get_user_by_username(username)
+        user = User.load_from_dynamodb(username)
         if not user:
             return jsonify({'error': 'User not found'}), 404
 
         return jsonify({
             "username": user.username,
             "name": user.name,
-            "clients": [c.to_dict() for c in user.clients] if user.clients else None
+            "clients": user.client_names
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -142,20 +136,20 @@ def update_user():
         return jsonify({'error': 'Missing username'}), 400
 
     try:
-        user = User.get_user_by_username(username)
+        user = User.load_from_dynamodb(username)
         if not user:
             return jsonify({'error': 'User not found'}), 404
         
         if name:
             user.name = name
         
-        User.save_user(user)
+        User.save_to_dynamodb()
 
         return jsonify({
             "message": "User updated successfully",
             "username": user.username,
             "name": user.name,
-            "clients": [c.to_dict() for c in user.clients] if user.clients else None
+            "clients": user.client_names
         }), 200
     except Exception as e:      
         return jsonify({'error': str(e)}), 500
@@ -166,35 +160,28 @@ def add_client():
     data = request.get_json()
     username = data.get('username')
     client_name = data.get('client_name')
-    fico_score = data.get('fico_score', 0)
-    dti_ratio = data.get('dti_ratio', 0.0)
-    monthly_expenses = data.get('monthly_expenses', 0.0)
-    credit_score = data.get('credit_score', 0)
-    income_sources = data.get('income_sources', [0.0] * 5)
 
     if not username or not client_name:
         return jsonify({'error': 'Missing username or client_name'}), 400
 
-    try:
-        user = User.get_user_by_username(username)
-        if not user:
-            return jsonify({'error': 'User not found'}), 404
-        # Check if client already exists
-        existing_client = next((c for c in user.clients if c.name == client_name), None)
-        if existing_client:
-            return jsonify({'error': 'Client already exists'}), 400
-        
-        # Add new client
-        user.add_client(client_name, credit_score, fico_score, dti_ratio, monthly_expenses, income_sources)
-        User.save_user(user)
+    # Load user from DynamoDB
+    user = User.load_from_dynamodb(username)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
 
-        return jsonify({
-            "message": "Client added successfully",
-            "username": user.username,
-            "clients": [c.to_dict() for c in user.clients] if user.clients else None
-        }), 201
-    except Exception as e:      
-        return jsonify({'error': str(e)}), 500
+    # Check if client already exists
+    if client_name in user.client_names:
+        return jsonify({'error': 'Client already exists for this user'}), 400
+
+    # Add client to user
+    user.add_client(client_name)
+    user.save_to_dynamodb()
+
+    # Save client to DynamoDB
+    client = Client(name=client_name, user_username=username)
+    client.save_to_dynamodb()
+
+    return jsonify({'message': 'Client added successfully'}), 201
     
 # API route to update a client's details
 @main.route('/user/client/update', methods=['POST'])
@@ -213,17 +200,36 @@ def update_client():
         return jsonify({'error': 'Missing username or client_name'}), 400
 
     try:
-        user = User.get_user_by_username(username)
+        user = User.load_from_dynamodb(username)
         if not user:
             return jsonify({'error': 'User not found'}), 404
 
-        user.update_client(client_name, credit_score, fico_score, dti_ratio, monthly_expenses, index, new_income)
-        User.save_user(user)
+        client = Client.load_from_dynamodb(client_name, username)
+        if not client:
+            return jsonify({'error': 'Client not found'}), 404
+        
+        if credit_score is not None:
+            client.credit_score = int(credit_score)
+        if fico_score is not None:
+            client.fico_score = int(fico_score)
+        if dti_ratio is not None:
+            client.dti_ratio = float(dti_ratio)
+        if monthly_expenses is not None:
+            client.update_monthly_expenses(float(monthly_expenses))
+        if new_income is not None:
+            if index is not None:
+                index = int(index)
+                if index < 0 or index >= len(client.income_sources):
+                    return jsonify({'error': 'Index out of range'}), 400
+                client.update_income_source(index=index, new_income=float(new_income))
+
+        # Save the updated client to DynamoDB
+        client.save_to_dynamodb()
 
         return jsonify({
             "message": "Client updated successfully",
             "username": user.username,
-            "clients": [c.to_dict() for c in user.clients] if user.clients else None
+            "updated_client": client.to_dict()
         }), 200
     except Exception as e:      
         return jsonify({'error': str(e)}), 500
@@ -238,13 +244,16 @@ def get_client():
         return jsonify({'error': 'Missing username or client_name'}), 400
 
     try:
-        user = User.get_user_by_username(username)
+        user = User.load_from_dynamodb(username)
         if not user:
             return jsonify({'error': 'User not found'}), 404
 
-        client = next((c for c in user.clients if c.name == client_name), None)
+        client = Client.load_from_dynamodb(client_name, username)
         if not client:
             return jsonify({'error': 'Client not found'}), 404
+        # Check if the client belongs to the user
+        if client.user_username != username:
+            return jsonify({'error': 'Client does not belong to this user'}), 403
 
         return jsonify({
             "username": user.username,
@@ -268,11 +277,11 @@ def read_client_income():
         return jsonify({'error': 'Missing username or client_name'}), 400
 
     try:
-        user = User.get_user_by_username(username)
+        user = User.load_from_dynamodb(username)
         if not user:
             return jsonify({'error': 'User not found'}), 404
 
-        client = next((c for c in user.clients if c.name == client_name), None)
+        client = Client.load_from_dynamodb(client_name, username)
         if not client:
             return jsonify({'error': 'Client not found'}), 404
 
@@ -282,8 +291,15 @@ def read_client_income():
         if income is None:
             return jsonify({'error': 'Income could not be extracted'}), 400
 
-        user.update_client(client_name, index=int(index), new_income=float(income))
-        User.save_user(user)
+        # Update the client's income source
+        if index is not None:
+            index = int(index)
+            if index < 0 or index >= len(client.income_sources):
+                return jsonify({'error': 'Index out of range'}), 400
+            client.update_income_source(index=index, new_income=float(income))
+            client.save_to_dynamodb()
+        else:
+            return jsonify({'error': 'Index not provided'}), 400
 
         return jsonify({
             "username": user.username,
@@ -307,27 +323,30 @@ def read_client_credit_report():
         return jsonify({'error': 'Missing username or client_name'}), 400
 
     try:
-        user = User.get_user_by_username(username)
+        user = User.load_from_dynamodb(username)
         if not user:
             return jsonify({'error': 'User not found'}), 404
 
-        client = next((c for c in user.clients if c.name == client_name), None)
+        client = Client.load_from_dynamodb(client_name, username)
+        # Check if the client exists
         if not client:
             return jsonify({'error': 'Client not found'}), 404
 
         text = extract_text_from_pdf(file)
         credit_score, fico_score, monthly_expenses = extract_credit_from_text(text)
 
+        if credit_score == "Unknown" and fico_score == "Unknown" and monthly_expenses == "Unknown":
+            return jsonify({'error': 'All values are unknown'}), 400
         if credit_score != "Unknown":
-            user.update_client(client_name, credit_score=int(credit_score))
+            client.credit_score = int(credit_score)
         else:
             return jsonify({'error': 'Credit score could not be extracted'}), 400
         if fico_score != "Unknown":
-            user.update_client(client_name, fico_score=int(fico_score))
+            client.fico_score = int(fico_score)
         if monthly_expenses != "Unknown":
-            user.update_client(client_name, monthly_expenses=float(monthly_expenses))
-
-        User.save_user(user)
+            client.update_monthly_expenses(float(monthly_expenses))
+        
+        client.save_to_dynamodb()
 
         return jsonify({
             "username": user.username,
@@ -364,14 +383,13 @@ def get_client_recommendation():
         return jsonify({'error': 'Missing username or client_name'}), 400
 
     try:
-        user = User.get_user_by_username(username)
+        user = User.load_from_dynamodb(username)
         if not user:
             return jsonify({'error': 'User not found'}), 404
 
-        client = next((c for c in user.clients if c.name == client_name), None)
+        client = Client.load_from_dynamodb(client_name, username)
         if not client:
             return jsonify({'error': 'Client not found'}), 404
-        
         if client.credit_score == 0:
             return jsonify({'error': 'Client has no credit score'}), 400
         if client.dti_ratio == 0:
@@ -392,4 +410,3 @@ def get_client_recommendation():
         }), 200
     except Exception as e:      
         return jsonify({'error': str(e)}), 500
-    

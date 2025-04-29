@@ -80,8 +80,7 @@ This document outlines all available API endpoints, their request parameters, an
 {
   "message": "User created successfully",
   "username": "<username>",
-  "name": "<name>",
-  "clients": [ ... ]
+  "name": "<name>"
 }
 ```
 
@@ -127,12 +126,7 @@ This document outlines all available API endpoints, their request parameters, an
 ```json
 {
   "username": "<username>",
-  "client_name": "<client>",
-  "credit_score": 720,
-  "fico_score": 0,
-  "dti_ratio": 0.0,
-  "monthly_expenses": 0.0,
-  "income_sources": [10000, 5000, 0, 0, 0]
+  "client_name": "<client>"
 }
 ```
 - **Response**:
@@ -166,7 +160,7 @@ This document outlines all available API endpoints, their request parameters, an
 {
   "message": "Client updated successfully",
   "username": "<username>",
-  "clients": [ ... ]
+  "updated_client": { ... }
 }
 ```
 
