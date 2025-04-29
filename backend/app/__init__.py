@@ -15,14 +15,13 @@ def create_app():
     # ─── Load current user from auth_token header ───
     @app.before_request
     def load_current_user():
-        token = request.headers.get('auth_token')
-        if token:
-            # Here we treat the auth_token as the username for simplicity;
-            # replace with real token verification if needed
+        auth = request.headers.get('Authorization', '')
+        if auth.lower().startswith('Bearer '):
+            token = auth.split(None, 1)[1]
             g.current_user = User.load_from_dynamodb(token)
         else:
             g.current_user = None
-    
+        
     from .routes import main
     app.register_blueprint(main)
 

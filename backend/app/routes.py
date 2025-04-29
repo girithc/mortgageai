@@ -177,17 +177,19 @@ def update_user():
 # API route to add a new client to a user
 @main.route('/user/client/add', methods=['POST'])
 def add_client():
+    from flask import g
+    # Authentication check
+    if not getattr(g, 'current_user', None):
+        return jsonify({'error': 'Unauthorized'}), 401
+
     data = request.get_json()
-    username = data.get('username')
     client_name = data.get('client_name')
 
-    if not username or not client_name:
-        return jsonify({'error': 'Missing username or client_name'}), 400
+    if not client_name:
+        return jsonify({'error': 'Missing client_name'}), 400
 
-    # Load user from DynamoDB
-    user = User.load_from_dynamodb(username)
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
+    # Use authenticated user
+    user = g.current_user
 
     # Check if client already exists
     if client_name in user.client_names:
@@ -198,7 +200,7 @@ def add_client():
     user.save_to_dynamodb()
 
     # Save client to DynamoDB
-    client = Client(name=client_name, user_username=username)
+    client = Client(name=client_name, user_username=user.username)
     client.save_to_dynamodb()
 
     return jsonify({'message': 'Client added successfully'}), 201
