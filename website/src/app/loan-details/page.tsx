@@ -9,7 +9,7 @@ import {
   DialogHeader, 
   DialogTitle 
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; #use "npx shadcn@latest add tabs" in terminal for this import
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; //use "npx shadcn@latest add tabs" in terminal for this import
 
 type UploadedDocument = {
   id: string;
@@ -154,9 +154,9 @@ export default function LoanDetailsPage() {
             </svg>
           </div>
           <div className="flex space-x-2">
-            <Button variant="outline" className="text-sm">
+{/*             <Button variant="outline" className="text-sm">
               Documents
-            </Button>
+            </Button> */}
             <Button 
               className="bg-[#7C3AED] text-white hover:bg-[#6D28D9]"
               onClick={() => setIsUploadDialogOpen(true)}
