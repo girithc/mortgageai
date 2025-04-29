@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Plus } from "lucide-react";
+import { Plus, X, UploadCloud } from "lucide-react";
 
 interface Loan {
   id: string;
@@ -38,11 +38,14 @@ const ALL_FILTERS: Array<"All" | StatusKey> = [
   "In Process",
   "Ready for Review",
   "Approved",
+  "Pending Documents",
+  "Denied",
 ];
 
 export default function ApplicationPage() {
   const [filter, setFilter] = useState<typeof ALL_FILTERS[number]>("All");
   const [search, setSearch] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // mock data
   const loans: Loan[] = [
@@ -133,7 +136,7 @@ export default function ApplicationPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="flex-1"
           />
-          <Button>
+          <Button onClick={() => setIsModalOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             New Loan
           </Button>
@@ -168,9 +171,7 @@ export default function ApplicationPage() {
             {filtered.map((loan) => (
               <tr key={loan.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <a className="text-indigo-600 hover:underline">
-                    {loan.id}
-                  </a>
+                  <a className="text-indigo-600 hover:underline">{loan.id}</a>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {loan.borrowers}
@@ -185,36 +186,72 @@ export default function ApplicationPage() {
                   {loan.rate}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        STATUS_STYLES[loan.status]
-                      }`}
-                    >
-                      {loan.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap w-60">
-                    <Progress value={loan.progress} className="h-2" />
-                    <p className="mt-1 text-xs text-gray-500">
-                      {Math.round((loan.progress / 100) * 5)}/5 steps
-                    </p>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {loan.lastUpdated}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                      STATUS_STYLES[loan.status]
+                    }`}
+                  >
+                    {loan.status}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap w-60">
+                  <Progress value={loan.progress} className="h-2" />
+                  <p className="mt-1 text-xs text-gray-500">
+                    {Math.round((loan.progress / 100) * 5)}/5 steps
+                  </p>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {loan.lastUpdated}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* New Loan Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-2xl font-bold">New Loan</h3>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            {/* Upload Area - Fixed Version */}
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 mb-6 text-center">
+              <UploadCloud className="w-10 h-10 text-gray-400 mb-4" />
+              <p className="text-gray-500 mb-4">Drag and drop your file here, or</p>
+              <label className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md cursor-pointer">
+                Browse Files
+                <input
+                  type="file"
+                  className="hidden"
+                />
+              </label>
+            </div>
+            <Input placeholder="Borrower" className="mb-2" />
+            <Input placeholder="Loan Amount" className="mb-2" />
+            <Input placeholder="Loan Type" className="mb-2" />
+            <Input placeholder="Desired Rate" className="mb-4" />
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setIsModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => { /* handle submit logic */ }}>
+                Submit
+              </Button>
+            </div>
+          </div>
         </div>
-      </main>
+      )}
+    </main>
   );
 }
-
-
-
-
-
 
 
 // "use client";
