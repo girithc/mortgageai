@@ -104,6 +104,25 @@ def create_user():
 
     return jsonify({'message': 'User created successfully'}), 201
 
+@main.route('/user/all', methods=['GET'])
+def get_all_users():
+    try:
+        users = User.get_all_users()
+        if not users:
+            return jsonify({'error': 'No users found'}), 404
+
+        user_list = []
+        for user in users:
+            user_list.append({
+                "username": user.username,
+                "name": user.name,
+                "clients": user.client_names
+            })
+
+        return jsonify(user_list), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 # API route to retrieve user details by username
 @main.route('/user/get', methods=['GET'])
 def get_user():
