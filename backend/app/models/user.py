@@ -2,7 +2,7 @@ import os
 import csv
 from typing import Optional
 import boto3
-from botocore.exceptions import ClientError
+from botocore.exceptions import ClientError, NoCredentialsError
 from dotenv import load_dotenv
 from app.models.client import Client
 
@@ -24,6 +24,7 @@ def ensure_user_table_exists():
     Other attributes (name, client_names) are schemaless and don't need to be declared.
     """
     client = dynamodb.meta.client
+    print(f">>> Checking for DynamoDB table '{USER_TABLE}'...")
 
     try:
         resp = client.describe_table(TableName=USER_TABLE)
@@ -102,5 +103,3 @@ class User:
         except ClientError as e:
             print(f"Error scanning users table: {e}")
             return []
-
-

@@ -42,7 +42,8 @@ def get_rate_sheets_response(question: str) -> str:
     response.raise_for_status()  # Raise exception for bad status codes
 
     # Extract readable message
-    readable_text = extract_readable_text(response.text)
+    # readable_text = extract_readable_text(response.text)
+    readable_text=response.text
 
     return readable_text
         

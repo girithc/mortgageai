@@ -25,6 +25,7 @@ def ensure_client_table_exists():
     Other attributes are schemaless.
     """
     client = dynamodb.meta.client
+    print(f">>> Checking for DynamoDB table '{CLIENT_TABLE}'...")
     try:
         resp = client.describe_table(TableName=CLIENT_TABLE)
         status = resp['Table']['TableStatus']
@@ -55,7 +56,7 @@ def ensure_client_table_exists():
 
 
 class Client:
-    def __init__(self, name, user_username, credit_score=0, fico_score=0, dti_ratio=0.0, monthly_expenses=0.0, income_sources=None):
+    def __init__(self, name, user_username, credit_score=0, fico_score=0, dti_ratio=0.0, monthly_expenses=0.0, income_sources=None, loan_amount_requested=0.0, loan_term=0, loan_down_payment=0.0, loan_interest_preference='fixed', llm_recommendation=''):
         self.name = name
         self.user_username = user_username
         self.credit_score = credit_score
@@ -64,6 +65,11 @@ class Client:
         self.monthly_expenses = monthly_expenses
         self.income_sources = income_sources if income_sources else [0.0] * 5
         self.total_income = 0.0  # Initialize total_income
+        self.loan_amount_requested = loan_amount_requested
+        self.loan_term = loan_term # e.g., 15 years, 30 years
+        self.loan_down_payment = loan_down_payment
+        self.loan_interest_preference = loan_interest_preference # e.g., 'fixed' or 'variable'
+        self.llm_recommendation = llm_recommendation
 
     def calculate_total_income(self):
         # Convert all income sources to Decimal before summing
@@ -101,7 +107,12 @@ class Client:
                     'dti_ratio': Decimal(str(self.dti_ratio)),  # Convert float to Decimal
                     'monthly_expenses': Decimal(str(self.monthly_expenses)),  # Convert float to Decimal
                     'income_sources': [Decimal(str(income)) for income in self.income_sources],  # Convert list of floats to Decimals
-                    'total_income': Decimal(str(self.total_income))  # Save total_income as Decimal
+                    'total_income': Decimal(str(self.total_income)),  # Save total_income as Decimal
+                    'loan_amount_requested': Decimal(str(self.loan_amount_requested)),  # Save as Decimal
+                    'loan_term': self.loan_term,  # e.g., 15 years, 30 years
+                    'loan_down_payment': Decimal(str(self.loan_down_payment)),  # Save as Decimal
+                    'loan_interest_preference': self.loan_interest_preference,  # e.g., 'fixed' or 'variable'
+                    'llm_recommendation': self.llm_recommendation
                 }
             )
         except ClientError as e:
@@ -121,7 +132,12 @@ class Client:
                     data.get('fico_score', 0),
                     float(data.get('dti_ratio', 0.0)),  # Convert Decimal to float
                     float(data.get('monthly_expenses', 0.0)),  # Convert Decimal to float
-                    [float(income) for income in data.get('income_sources', [0.0] * 5)]  # Convert list of Decimals to floats
+                    [float(income) for income in data.get('income_sources', [0.0] * 5)],  # Convert list of Decimals to floats
+                    float(data.get('loan_amount_requested', 0.0)),  # Convert Decimal to float
+                    data.get('loan_term', 0),  # e.g., 15 years, 30 years
+                    float(data.get('loan_down_payment', 0.0)),  # Convert Decimal to float
+                    data.get('loan_interest_preference', 'fixed'),  # e.g., 'fixed' or 'variable'
+                    data.get('llm_recommendation', '')
                 )
                 client.total_income = float(data.get('total_income', 0.0))  # Load total_income
                 return client
@@ -139,5 +155,10 @@ class Client:
             'dti_ratio': float(self.dti_ratio),  # Convert Decimal to float for JSON serialization
             'monthly_expenses': float(self.monthly_expenses),  # Convert Decimal to float
             'income_sources': [float(income) for income in self.income_sources],  # Convert list of Decimals to floats
-            'total_income': float(self.total_income)  # Include total_income
+            'total_income': float(self.total_income),  # Include total_income
+            'loan_amount_requested': self.loan_amount_requested,
+            'loan_term': self.loan_term,
+            'loan_down_payment': self.loan_down_payment,
+            'loan_interest_preference': self.loan_interest_preference,
+            'llm_recommendation': self.llm_recommendation
         }

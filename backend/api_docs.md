@@ -140,7 +140,31 @@ This document outlines all available API endpoints, their request parameters, an
 
 ---
 
-## **10. Update Client**
+## **10. Update Client Loan Details**
+**POST /user/client/update-loan-details**
+- **Body (JSON)**:
+```json
+{
+  "username": "<username>",
+  "client_name": "<client>",
+  "loan_amount_requested": <loan amount>,
+  "loan_term": <loan term>,
+  "loan_down_payment": <down payment>,
+  "loan_interest_preference": "<interest preference>"
+}
+```
+- **Response**:
+```json
+{
+  "message": "Client loan details updated successfully",
+  "username": "<username>",
+  "updated_client": { ... }
+}
+```
+
+---
+
+## **11. Update Client Finance**
 **POST /user/client/update**
 - **Body (JSON)**:
 ```json
@@ -166,7 +190,7 @@ This document outlines all available API endpoints, their request parameters, an
 
 ---
 
-## **11. Get Client**
+## **12. Get Client**
 **GET /user/client/get?username=xxx&client_name=yyy**
 - **Response**:
 ```json
@@ -178,7 +202,7 @@ This document outlines all available API endpoints, their request parameters, an
 
 ---
 
-## **12. Read Income From File for Client**
+## **13. Read Income From File for Client**
 **POST /user/client/read-income**
 - **Parameters (form-data)**:
   - `file`: PDF income document (required)
@@ -196,7 +220,7 @@ This document outlines all available API endpoints, their request parameters, an
 
 ---
 
-## **13. Read Credit Report for Client**
+## **14. Read Credit Report for Client**
 **POST /user/client/read-credit-report**
 - **Parameters (form-data)**:
   - `file`: PDF credit report document (required)
@@ -212,7 +236,7 @@ This document outlines all available API endpoints, their request parameters, an
 
 ---
 
-## **14. Extract Credit Report**
+## **15. Extract Credit Report**
 **POST /file/credit-report/extract**
 - **Parameters (form-data)**:
   - `file`: PDF credit report document (required)
@@ -227,16 +251,32 @@ This document outlines all available API endpoints, their request parameters, an
 
 ---
 
-## **15. Get Client Recommendation**
-**GET /user/client/recommendation?username=xxx&client_name=yyy**
+## **16. Get New LLM Recommendation For Client**
+**GET /user/client/new-recommendation?username=xxx&client_name=yyy**
+  - `username`: The username of the associated user (required).
+  - `client_name`: The name of the client (required).
 - **Response**:
 ```json
 {
   "username": "<username>",
-  "client": { ... },
+  "client": "<client_name>",
   "recommendation": "<LLM output>"
 }
 ```
 
 ---
+
+## **17. Get Client LLM Recommendation**
+**GET /user/client/recommendation?username=xxx&client_name=yyy**
+- **Parameters (query)**:
+  - `username`: The username of the associated user (required).
+  - `client_name`: The name of the client (required).
+- **Response**:
+```json
+{
+  "username": "<username>",
+  "client_name": "<client_name>",
+  "llm_recommendation": "<LLM recommendation>"
+}
+```
 
