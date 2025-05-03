@@ -260,7 +260,7 @@ This document outlines all available API endpoints, their request parameters, an
 {
   "username": "<username>",
   "client": "<client_name>",
-  "recommendation": "<LLM output>"
+  "llm_recommendation": "<LLM output>"
 }
 ```
 
