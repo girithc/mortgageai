@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, render_template
-from app.db.db_upload_unstructured import handle_file_upload
-from app.db.db_prompt_query import get_query_response
+from app.db.astra_db_upload_unstructured import handle_file_upload
+from app.db.astra_db_prompt_query import get_query_response
 from app.db.astra_db_rate_sheets_query import get_rate_sheets_response
 from app.gpt.gpt_classify_income import classify_and_extract_income_from_text
 from app.util.extract_text import extract_text_from_pdf
@@ -205,7 +205,7 @@ def add_client():
 
     return jsonify({'message': 'Client added successfully'}), 201
     
-# API route to update a client's details
+# API route to update a client's financial details
 @main.route('/user/client/update', methods=['POST'])
 def update_client():
     data = request.get_json()
@@ -254,6 +254,49 @@ def update_client():
             "updated_client": client.to_dict()
         }), 200
     except Exception as e:      
+        return jsonify({'error': str(e)}), 500
+
+# API route to update a client's loan application details
+@main.route('/user/client/update-loan-details', methods=['POST'])
+def update_client_loan_details():
+    data = request.get_json()
+    username = data.get('username')
+    client_name = data.get('client_name')
+    loan_amount_requested = data.get('loan_amount_requested', None)
+    loan_term = data.get('loan_term', None)
+    loan_down_payment = data.get('loan_down_payment', None)
+    loan_interest_preference = data.get('loan_interest_preference', None)
+
+    if not username or not client_name:
+        return jsonify({'error': 'Missing username or client_name'}), 400
+
+    try:
+        user = User.load_from_dynamodb(username)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        client = Client.load_from_dynamodb(client_name, username)
+        if not client:
+            return jsonify({'error': 'Client not found'}), 404
+
+        if loan_amount_requested is not None:
+            client.loan_amount_requested = float(loan_amount_requested)
+        if loan_term is not None:
+            client.loan_term = int(loan_term)
+        if loan_down_payment is not None:
+            client.loan_down_payment = float(loan_down_payment)
+        if loan_interest_preference is not None:
+            client.loan_interest_preference = loan_interest_preference
+
+        # Save the updated client to DynamoDB
+        client.save_to_dynamodb()
+
+        return jsonify({
+            "message": "Client loan details updated successfully",
+            "username": user.username,
+            "updated_client": client.to_dict()
+        }), 200
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 # API route to retrieve a specific client's details
@@ -395,8 +438,8 @@ def extract_credit_report():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
-# API route to get a recommendation for a client based on their credit score and income
-@main.route('/user/client/recommendation', methods=['GET'])
+# API route to get a new recommendation for a client based on their loan application, credit score and income
+@main.route('/user/client/new-recommendation', methods=['GET'])
 def get_client_recommendation():
     username = request.args.get('username')
     client_name = request.args.get('client_name')
@@ -423,12 +466,46 @@ def get_client_recommendation():
             credit_score=client.credit_score, 
             fico_score=client.fico_score if client.fico_score != 0 else "Unknown",
             dti_ratio=client.dti_ratio, 
-            income=client.total_income))
+            income=client.total_income,
+            loan_amount_requested=client.loan_amount_requested,
+            loan_term=client.loan_term,
+            loan_down_payment=client.loan_down_payment,
+            loan_interest_preference=client.loan_interest_preference
+            ))
+        
+        client.llm_recommendation = recommendation
+        client.save_to_dynamodb()
 
         return jsonify({
             "username": user.username,
             "client": client.to_dict(),
-            "recommendation": recommendation
+            "llm_recommendation": recommendation
         }), 200
     except Exception as e:      
+        return jsonify({'error': str(e)}), 500
+
+# API route to get an existing recommendation for a client
+@main.route('/user/client/recommendation', methods=['GET'])
+def get_client_llm_recommendation():
+    username = request.args.get('username')
+    client_name = request.args.get('client_name')
+
+    if not username or not client_name:
+        return jsonify({'error': 'Missing username or client_name'}), 400
+
+    try:
+        user = User.load_from_dynamodb(username)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        client = Client.load_from_dynamodb(client_name, username)
+        if not client:
+            return jsonify({'error': 'Client not found'}), 404
+
+        return jsonify({
+            "username": user.username,
+            "client_name": client.name,
+            "llm_recommendation": client.llm_recommendation
+        }), 200
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
