@@ -41,9 +41,8 @@ def get_rate_sheets_response(question: str) -> str:
     response = requests.request("POST", url, json=payload, headers=headers)
     response.raise_for_status()  # Raise exception for bad status codes
 
-    # Extract readable message
-    # readable_text = extract_readable_text(response.text)
-    readable_text=response.text
+    parsed = json.loads(response.text)
+    markdown_text = parsed["outputs"][0]["outputs"][0]["results"]["message"]["text"]
 
-    return readable_text
+    return markdown_text
         

@@ -3,20 +3,20 @@ def rate_sheets_recommendation_prompt(credit_score: int, fico_score, dti_ratio: 
     Generates a prompt for recommending credit sheets based on credit score and income.
 
     Args:
-        credit_score (int): The credit score of the user.
-        income (float): The annual income of the user.
-        fico_score (int): The FICO score of the user.
-        dti_ratio (float): The debt-to-income ratio of the user.
-        loan_amount_requested (float): The amount of loan requested by the user.
+        credit_score (int): The credit score of the client.
+        income (float): The annual income of the client.
+        fico_score (int): The FICO score of the client.
+        dti_ratio (float): The debt-to-income ratio of the client.
+        loan_amount_requested (float): The amount of loan requested by the client.
         loan_term (int): The term of the loan in years.
         loan_down_payment (float): The down payment amount for the loan.
-        loan_interest_preference (str): The user's preference for loan interest type (fixed or adjustable).
+        loan_interest_preference (str): The client's preference for loan interest type (fixed or adjustable).
 
     Returns:
         str: A formatted prompt string.
     """
     return f"""
-    Based on the following information, please recommend the best mortgage options for the user, including details on loan amount, interest rate, loan term, monthly payment, down payment, fixed vs adjustable rate, loan-to-value ratio, and any other relevant details. Also, recommend a wholesale lender that support these options.
+    You are a mortgage lending expert. Based on the following client profile, recommend the most suitable wholesale mortgage lender(s), including their program names if available, and explain why they are a good fit. Consider credit score, DTI, loan preferences, and loan-to-value ratio. Provide specific, up-to-date recommendations where possible.
     
     Loan Application Details:
     Loan Amount Requested: ${loan_amount_requested}
@@ -31,5 +31,9 @@ def rate_sheets_recommendation_prompt(credit_score: int, fico_score, dti_ratio: 
     Annual Income: ${income}
 
     
-    Please provide a detailed explanation of why each recommendation is suitable for the user.
+    Please include:
+    1. A short list of recommended wholesale lenders
+    2. Program highlights (e.g., low-FICO programs, high-LTV allowance, etc.)
+    3. Why each recommendation is appropriate given the client profile
+    4. Any potential limitations or considerations
     """

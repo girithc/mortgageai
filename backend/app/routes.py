@@ -479,7 +479,7 @@ def get_client_recommendation():
         return jsonify({
             "username": user.username,
             "client": client.to_dict(),
-            "recommendation": recommendation
+            "llm_recommendation": recommendation
         }), 200
     except Exception as e:      
         return jsonify({'error': str(e)}), 500
