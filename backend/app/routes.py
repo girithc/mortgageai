@@ -1,3 +1,4 @@
+from decimal import Decimal
 from flask import Blueprint, request, jsonify, render_template
 from app.db.astra_db_upload_unstructured import handle_file_upload
 from app.db.astra_db_prompt_query import get_query_response
@@ -215,8 +216,7 @@ def update_client():
     fico_score = data.get('fico_score', None)
     dti_ratio = data.get('dti_ratio', None)
     monthly_expenses = data.get('monthly_expenses', None)
-    new_income = data.get('new_income', None)
-    index = data.get('index', None)
+    income_sources = data.get('income_sources', None)
 
     if not username or not client_name:
         return jsonify({'error': 'Missing username or client_name'}), 400
@@ -229,7 +229,7 @@ def update_client():
         client = Client.load_from_dynamodb(client_name, username)
         if not client:
             return jsonify({'error': 'Client not found'}), 404
-        
+
         if credit_score is not None:
             client.credit_score = int(credit_score)
         if fico_score is not None:
@@ -238,12 +238,10 @@ def update_client():
             client.dti_ratio = float(dti_ratio)
         if monthly_expenses is not None:
             client.update_monthly_expenses(float(monthly_expenses))
-        if new_income is not None:
-            if index is not None:
-                index = int(index)
-                if index < 0 or index >= len(client.income_sources):
-                    return jsonify({'error': 'Index out of range'}), 400
-                client.update_income_source(index=index, new_income=float(new_income))
+        if income_sources is not None:
+            client.income_sources = [[source[0], float(source[1])] for source in income_sources]
+            client.calculate_total_income()
+            client.calculate_dti_ratio()
 
         # Save the updated client to DynamoDB
         client.save_to_dynamodb()
@@ -332,9 +330,8 @@ def get_client():
 def read_client_income():
     username = request.form['username']
     client_name = request.form['client_name']
-    index = request.form.get('index')
     file = request.files.get('file')
-   
+
     if not file:
         return jsonify({"error": "Missing file"}), 400
 
@@ -356,22 +353,16 @@ def read_client_income():
         if income is None:
             return jsonify({'error': 'Income could not be extracted'}), 400
 
-        # Update the client's income source
-        if index is not None:
-            index = int(index)
-            if index < 0 or index >= len(client.income_sources):
-                return jsonify({'error': 'Index out of range'}), 400
-            client.update_income_source(index=index, new_income=float(income))
-            client.save_to_dynamodb()
-        else:
-            return jsonify({'error': 'Index not provided'}), 400
+        # Add the new income source to the client
+        client.add_income_source(source_type=doc_type, new_income=float(income))
+        client.save_to_dynamodb()
 
         return jsonify({
             "username": user.username,
             "client": client.to_dict(),
             "read_doc_type": doc_type
         }), 200
-    except Exception as e:      
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 # API route to read a credit report from a file and update a client's credit score, fico score, monthly expenses, and DTI ratio
@@ -459,7 +450,7 @@ def get_client_recommendation():
             return jsonify({'error': 'Client has no credit score'}), 400
         if client.dti_ratio == 0:
             return jsonify({'error': 'Client has no DTI ratio'}), 400
-        if not client.income_sources or all(income == 0 for income in client.income_sources):
+        if not client.income_sources or client.total_income == 0:
             return jsonify({'error': 'Client has no income sources'}), 400
 
         recommendation = get_rate_sheets_response(rate_sheets_recommendation_prompt(

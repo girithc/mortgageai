@@ -63,7 +63,7 @@ class Client:
         self.fico_score = fico_score
         self.dti_ratio = dti_ratio
         self.monthly_expenses = monthly_expenses
-        self.income_sources = income_sources if income_sources else [0.0] * 5
+        self.income_sources = income_sources if income_sources else []
         self.total_income = 0.0  # Initialize total_income
         self.loan_amount_requested = loan_amount_requested
         self.loan_term = loan_term # e.g., 15 years, 30 years
@@ -72,13 +72,11 @@ class Client:
         self.llm_recommendation = llm_recommendation
 
     def calculate_total_income(self):
-        # Convert all income sources to Decimal before summing
-        self.total_income = sum(Decimal(str(income)) for income in self.income_sources)
+        # Update to sum only the income amounts
+        self.total_income = sum(Decimal(str(income[1])) for income in self.income_sources)
 
-    def update_income_source(self, index, new_income):
-        if not (0 <= index < 5):
-            raise IndexError("Index must be between 0 and 4.")
-        self.income_sources[index] = new_income
+    def add_income_source(self, source_type, new_income):
+        self.income_sources.append([source_type, new_income])
         self.calculate_total_income()
         self.calculate_dti_ratio()
 
@@ -106,7 +104,7 @@ class Client:
                     'fico_score': self.fico_score,
                     'dti_ratio': Decimal(str(self.dti_ratio)),  # Convert float to Decimal
                     'monthly_expenses': Decimal(str(self.monthly_expenses)),  # Convert float to Decimal
-                    'income_sources': [Decimal(str(income)) for income in self.income_sources],  # Convert list of floats to Decimals
+                    'income_sources': [[source[0], Decimal(str(source[1]))] for source in self.income_sources],  # Convert income amounts to Decimals
                     'total_income': Decimal(str(self.total_income)),  # Save total_income as Decimal
                     'loan_amount_requested': Decimal(str(self.loan_amount_requested)),  # Save as Decimal
                     'loan_term': self.loan_term,  # e.g., 15 years, 30 years
@@ -132,7 +130,7 @@ class Client:
                     data.get('fico_score', 0),
                     float(data.get('dti_ratio', 0.0)),  # Convert Decimal to float
                     float(data.get('monthly_expenses', 0.0)),  # Convert Decimal to float
-                    [float(income) for income in data.get('income_sources', [0.0] * 5)],  # Convert list of Decimals to floats
+                    [[source[0], float(source[1])] for source in data.get('income_sources', [])],  # Convert income amounts to floats
                     float(data.get('loan_amount_requested', 0.0)),  # Convert Decimal to float
                     data.get('loan_term', 0),  # e.g., 15 years, 30 years
                     float(data.get('loan_down_payment', 0.0)),  # Convert Decimal to float
@@ -154,7 +152,7 @@ class Client:
             'fico_score': self.fico_score,
             'dti_ratio': float(self.dti_ratio),  # Convert Decimal to float for JSON serialization
             'monthly_expenses': float(self.monthly_expenses),  # Convert Decimal to float
-            'income_sources': [float(income) for income in self.income_sources],  # Convert list of Decimals to floats
+            'income_sources': [[source[0], float(source[1])] for source in self.income_sources],
             'total_income': float(self.total_income),  # Include total_income
             'loan_amount_requested': self.loan_amount_requested,
             'loan_term': self.loan_term,
