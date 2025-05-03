@@ -70,17 +70,32 @@ Sample Response (200 OK):
 ## Some relevant API endpoints for typical workflow
 Read `app/routes.py` for implementation details.
 
-### 1. Create new user to store in database
+### 1. Update a client's loan application details
+`/user/client/update-loan-details`
+- **Method**: POST
+- **Description**: Updates a client's loan application details such as loan amount requested, loan term, down payment, and interest preference.
+
+### 2. Create new user to store in database
 `/user/create`
+- **Method**: POST
+- **Description**: Creates a new user in the database.
 
-### 2. Add a new client to user
+### 3. Add a new client to user
 `/user/client/add`
+- **Method**: POST
+- **Description**: Adds a new client to an existing user.
 
-### 3. Automatically update client's income via file upload (using LLM)
+### 4. Automatically update client's income via file upload (using LLM)
 `/user/client/read-income`
+- **Method**: POST
+- **Description**: Updates a client's income details by extracting information from an uploaded file.
 
-### 4. Automatically update client's credit score, fico score, expenses via file upload (using LLM)
+### 5. Automatically update client's credit score, fico score, expenses via file upload (using LLM)
 `/user/client/read-credit-report`
+- **Method**: POST
+- **Description**: Updates a client's credit score, FICO score, and expenses by extracting information from an uploaded file.
 
-### 5. Finally, get mortgage loan recommendation for a client (using LLM)
-`/user/client/recommendation`
+### 6. Finally, get mortgage loan recommendation for a client (using LLM)
+`/user/client/new-recommendation`
+- **Method**: GET
+- **Description**: Provides a mortgage loan recommendation for a client based on their financial details.
