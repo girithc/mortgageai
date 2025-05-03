@@ -70,20 +70,20 @@ Sample Response (200 OK):
 ## Some relevant API endpoints for typical workflow
 Read `app/routes.py` for implementation details.
 
-### 1. Update a client's loan application details
-`/user/client/update-loan-details`
-- **Method**: POST
-- **Description**: Updates a client's loan application details such as loan amount requested, loan term, down payment, and interest preference.
-
-### 2. Create new user to store in database
+### 1. Create new user to store in database
 `/user/create`
 - **Method**: POST
 - **Description**: Creates a new user in the database.
 
-### 3. Add a new client to user
+### 2. Add a new client to user
 `/user/client/add`
 - **Method**: POST
 - **Description**: Adds a new client to an existing user.
+
+### 3. Update a client's loan application details
+`/user/client/update-loan-details`
+- **Method**: POST
+- **Description**: Updates a client's loan application details such as loan amount requested, loan term, down payment, and interest preference.
 
 ### 4. Automatically update client's income via file upload (using LLM)
 `/user/client/read-income`
