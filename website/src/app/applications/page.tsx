@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, X, UploadCloud } from "lucide-react";
 
 interface Loan {
@@ -46,66 +48,112 @@ export default function ApplicationPage() {
   const [filter, setFilter] = useState<typeof ALL_FILTERS[number]>("All");
   const [search, setSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loans, setLoans] = useState([])
+  const [borrowers, setBorrowers] = useState([{ firstname: "", lastname: "", phone: "", email: "" }]);
+  const [loanAmount, setLoanAmount] = useState("");
+  const [propertyPrice, setPropertyPrice] = useState("");
+  const [loanType, setLoanType] = useState("CONVENTIONAL");
+  const [loanTerm, setLoanTerm] = useState("30yrs");
+  const [loanPurpose, setLoanPurpose] = useState("PURCHASE");
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+ 
+  const addBorrower = () => {
+    setBorrowers([...borrowers, { firstname: "", lastname: "", phone: "", email: "" }]);
+  };
+  
+  const updateBorrower = (index: number, field: string, value: string) => {
+    const updatedBorrowers = [...borrowers];
+    updatedBorrowers[index][field] = value;
+    setBorrowers(updatedBorrowers);
+  };
+  
+  useEffect(() => {
+      let base_url = process.env.REACT_APP_SERVER_URL || "http://localhost:5000"
+      const loadApplications = async () => {
+        // Make the HTTP request
+        const response = await fetch(`${base_url}/applications`);
+          
+        // Check if the request was successful
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        
+        // Parse the JSON response
+        const data = await response.json();
 
-  // mock data
-  const loans: Loan[] = [
-    {
-      id: "L12345",
-      borrowers: "Alice Firstimer and John Homeowner",
-      amount: "$320,000",
-      type: "Conventional",
-      rate: "4.25%",
-      status: "In Process",
-      progress: (3 / 5) * 100,
-      lastUpdated: "04/24/2025",
-    },
-    {
-      id: "L12346",
-      borrowers: "Sarah Johnson and Mark Williams",
-      amount: "$450,000",
-      type: "FHA",
-      rate: "4.5%",
-      status: "Ready for Review",
-      progress: (4 / 5) * 100,
-      lastUpdated: "04/23/2025",
-    },
-    {
-      id: "L12347",
-      borrowers: "David Lee and Jennifer Kim",
-      amount: "$275,000",
-      type: "VA",
-      rate: "4%",
-      status: "Pending Documents",
-      progress: (2 / 5) * 100,
-      lastUpdated: "04/25/2025",
-    },
-    {
-      id: "L12348",
-      borrowers: "Michael Brown and Lisa Brown",
-      amount: "$380,000",
-      type: "Conventional",
-      rate: "4.375%",
-      status: "Approved",
-      progress: 100,
-      lastUpdated: "04/22/2025",
-    },
-    {
-      id: "L12349",
-      borrowers: "Robert Smith",
-      amount: "$210,000",
-      type: "Conventional",
-      rate: "4.25%",
-      status: "Denied",
-      progress: (3 / 5) * 100,
-      lastUpdated: "04/21/2025",
-    },
-  ];
+        setLoans(data)
+      }
+
+      loadApplications()
+  }, [])
+
+
 
   const filtered = loans
     .filter((l) => filter === "All" || l.status === filter)
     .filter((l) =>
       l.borrowers.toLowerCase().includes(search.trim().toLowerCase())
     );
+
+  const handleSubmit = async () => {
+    // Handle the form submission logic here
+    console.log("Form submitted with values:", {
+      propertyPrice,
+      loanAmount,
+      loanType,
+      loanTerm,
+      loanPurpose,
+      borrowers,
+    });
+    
+    let base_url = process.env.REACT_APP_SERVER_URL || "http://localhost:5000"
+
+    // Create a FormData object
+    const formData = new FormData();
+    formData.append("propertyPrice", propertyPrice);
+    formData.append("loanAmount", loanAmount);
+    formData.append("loanType", loanType);
+    formData.append("loanTerm", loanTerm);
+    formData.append("loanPurpose", loanPurpose);
+
+    // Append borrowers as a JSON string
+    formData.append("borrowers", JSON.stringify(borrowers));
+
+     // Append selected files
+    if (selectedFiles.length > 0) {
+      selectedFiles.forEach((file) => {
+        formData.append("files", file); // Use the same key for multiple files
+      });
+    }
+
+    try {
+      // Make the HTTP request
+      const response = await fetch(`${base_url}/applications`, {
+        method: "POST",
+        body: formData, // Send the FormData object
+      });
+
+      // Check if the request was successful
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      // Parse the JSON response
+      const data = await response.json();
+      console.log("Response from server:", data);
+
+      // Reset the form fields
+      // setPropertyPrice("");
+      // setLoanAmount("");
+      // setLoanType("CONVENTIONAL");
+      // setLoanTerm("30yrs");
+      // setLoanPurpose("PURCHASE");
+      // setBorrowers([{ firstname: "", lastname: "", phone: "", email: "" }]);
+      // setIsModalOpen(false);
+    } catch (error) {
+      console.error("Error submitting form:", error);
+    }
+  }
 
   return (
     <main className="container mx-auto p-6 space-y-6">
@@ -171,7 +219,7 @@ export default function ApplicationPage() {
             {filtered.map((loan) => (
               <tr key={loan.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <a className="text-indigo-600 hover:underline">{loan.id}</a>
+                  <a href={`loan-details?loan_id=${loan.id}`} className="text-indigo-600 hover:underline">{loan.id}</a>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {loan.borrowers}
@@ -211,8 +259,8 @@ export default function ApplicationPage() {
 
       {/* New Loan Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" >
+          <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-screen" style={{overflowY: "auto",scrollbarWidth: "none"}}>
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-2xl font-bold">New Loan</h3>
               <button
@@ -231,18 +279,121 @@ export default function ApplicationPage() {
                 <input
                   type="file"
                   className="hidden"
+                  multiple
+                  onChange={(e) => {
+                    if (e.target.files) {
+                      setSelectedFiles(Array.from(e.target.files)); // Convert FileList to an array
+                    }
+                  }}
                 />
               </label>
+              {selectedFiles.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="text-sm font-semibold">Selected Files:</h4>
+                  <ul className="list-disc list-inside text-left">
+                    {selectedFiles.map((file, index) => (
+                      <Badge key={index}>{file.name.substring(0, 20)}</Badge>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
-            <Input placeholder="Borrower" className="mb-2" />
-            <Input placeholder="Loan Amount" className="mb-2" />
-            <Input placeholder="Loan Type" className="mb-2" />
-            <Input placeholder="Desired Rate" className="mb-4" />
+            <Input 
+              type="number" 
+              placeholder="Property Amount" 
+              className="mb-2" 
+              value={propertyPrice}
+              onChange={(e) => setPropertyPrice(e.target.value)}
+            />
+            <Input 
+              type="number" 
+              placeholder="Loan Amount" 
+              className="mb-2" 
+              value={loanAmount}
+              onChange={(e) => setLoanAmount(e.target.value)}
+            />
+            <Select
+              value={loanType}
+              onValueChange={(value) => setLoanType(value)}
+            >
+              <SelectTrigger className="mb-2">
+                <SelectValue placeholder="Loan Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="CONVENTIONAL">Conventional</SelectItem>
+                <SelectItem value="NON_CONVENTIONAL">Non-Conventional</SelectItem>
+                <SelectItem value="VA">VA</SelectItem>
+                <SelectItem value="FHA">FHA</SelectItem>
+              </SelectContent> 
+            </Select>
+            <Select
+              value={loanTerm}
+              onValueChange={(value) => setLoanTerm(value)}
+            >
+              <SelectTrigger className="mb-2">
+                <SelectValue placeholder="Loan Term" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="30yrs">30 years</SelectItem>
+                <SelectItem value="15yrs">15 years</SelectItem>
+              </SelectContent> 
+            </Select>
+            <Select
+              value={loanPurpose}
+              onValueChange={(value) => setLoanPurpose(value)}
+            >
+              <SelectTrigger className="mb-2">
+                <SelectValue placeholder="Loan Purpose" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="PURCHASE">Purchase</SelectItem>
+                <SelectItem value="REFINANCE">Refinance</SelectItem>
+              </SelectContent> 
+            </Select>
+            <Button variant="outline" onClick={addBorrower} className="w-full">
+              + Add Borrower
+            </Button>
+            {borrowers.map((borrower, index) => (
+              <div key={index} className="mb-4 border p-4 rounded-md">
+                <h3 className="text-lg font-semibold mb-2">Borrower {index + 1}</h3>
+                <Input
+                  type="text"
+                  placeholder="First Name"
+                  value={borrower.firstname}
+                  onChange={(e) => updateBorrower(index, "firstname", e.target.value)}
+                  className="mb-2"
+                />
+                <Input
+                  type="text"
+                  placeholder="Last Name"
+                  value={borrower.lastname}
+                  onChange={(e) => updateBorrower(index, "lastname", e.target.value)}
+                  className="mb-2"
+                />
+                <Input
+                  type="text"
+                  placeholder="Phone"
+                  value={borrower.phone}
+                  onChange={(e) => updateBorrower(index, "phone", e.target.value)}
+                  className="mb-2"
+                />
+                <Input
+                  type="email"
+                  placeholder="Email"
+                  value={borrower.email}
+                  onChange={(e) => updateBorrower(index, "email", e.target.value)}
+                  className="mb-2"
+                />
+              </div>
+            ))}
+           
             <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setIsModalOpen(false)}>
+              <Button variant="outline" onClick={() => {
+                setIsModalOpen(false);
+                setBorrowers([{ firstname: "", lastname: "", phone: "", email: "" }])}}>
                 Cancel
               </Button>
-              <Button onClick={() => { /* handle submit logic */ }}>
+              <Button onClick={() => { handleSubmit(); setIsModalOpen(false); }}>
                 Submit
               </Button>
             </div>

@@ -1,5 +1,6 @@
 # Moved the Client class to this file from user.py
 import os
+from random import randint
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
 from dotenv import load_dotenv
@@ -38,11 +39,11 @@ def ensure_client_table_exists():
             TableName=CLIENT_TABLE,
             KeySchema=[
                 {'AttributeName': 'user_username', 'KeyType': 'HASH'},  # Partition key
-                {'AttributeName': 'name',          'KeyType': 'RANGE'}  # Sort key
+                {'AttributeName': 'id',          'KeyType': 'RANGE'}  # Sort key
             ],
             AttributeDefinitions=[
                 {'AttributeName': 'user_username', 'AttributeType': 'S'},
-                {'AttributeName': 'name',          'AttributeType': 'S'}
+                {'AttributeName': 'id',          'AttributeType': 'S'}
             ],
             BillingMode='PAY_PER_REQUEST'
         )
@@ -56,9 +57,31 @@ def ensure_client_table_exists():
 
 
 class Client:
-    def __init__(self, name, user_username, credit_score=0, fico_score=0, dti_ratio=0.0, monthly_expenses=0.0, income_sources=None, loan_amount_requested=0.0, loan_term=0, loan_down_payment=0.0, loan_interest_preference='fixed', llm_recommendation=''):
+    def __init__(self, 
+                 name, 
+                 user_username,
+                 id=None, 
+                 credit_score=0, 
+                 fico_score=0, 
+                 dti_ratio=0.0, 
+                 monthly_expenses=0.0, 
+                 income_sources=None, 
+                 loan_amount_requested=0.0, 
+                 loan_term=0, 
+                 loan_down_payment=0.0, 
+                 loan_interest_preference='fixed', 
+                 llm_recommendation='', 
+                 phone_number='', 
+                 email='', 
+                 ssn='',
+                 marital_status='SINGLE',):
+        self.id = id if id else f"B{str(randint(1000, 9999))}"
         self.name = name
         self.user_username = user_username
+        self.phone_number = phone_number
+        self.email = email
+        self.ssn = ssn
+        self.marital_status = marital_status    
         self.credit_score = credit_score
         self.fico_score = fico_score
         self.dti_ratio = dti_ratio
@@ -100,8 +123,13 @@ class Client:
         try:
             table.put_item(
                 Item={
+                    'id': self.id,
                     'name': self.name,
                     'user_username': self.user_username,
+                    'phone_number': self.phone_number,
+                    'email': self.email,
+                    'ssn': self.ssn,
+                    'marital_status': self.marital_status,
                     'credit_score': self.credit_score,
                     'fico_score': self.fico_score,
                     'dti_ratio': Decimal(str(self.dti_ratio)),  # Convert float to Decimal
@@ -119,25 +147,30 @@ class Client:
             print(f"Error saving client to DynamoDB: {e}")
 
     @staticmethod
-    def load_from_dynamodb(name, user_username) -> 'Client':
+    def load_from_dynamodb(id, user_username) -> 'Client':
         table = dynamodb.Table(CLIENT_TABLE)
         try:
-            response = table.get_item(Key={'name': name, 'user_username': user_username})
+            response = table.get_item(Key={'id': id, 'user_username': user_username})
             if 'Item' in response:
                 data = response['Item']
                 client = Client(
-                    data['name'],
-                    data['user_username'],
-                    data.get('credit_score', 0),
-                    data.get('fico_score', 0),
-                    float(data.get('dti_ratio', 0.0)),  # Convert Decimal to float
-                    float(data.get('monthly_expenses', 0.0)),  # Convert Decimal to float
-                    [float(income) for income in data.get('income_sources', [0.0] * 5)],  # Convert list of Decimals to floats
-                    float(data.get('loan_amount_requested', 0.0)),  # Convert Decimal to float
-                    data.get('loan_term', 0),  # e.g., 15 years, 30 years
-                    float(data.get('loan_down_payment', 0.0)),  # Convert Decimal to float
-                    data.get('loan_interest_preference', 'fixed'),  # e.g., 'fixed' or 'variable'
-                    data.get('llm_recommendation', '')
+                    id=data['id'],
+                    name=data['name'],
+                    user_username=data['user_username'],
+                    credit_score=data.get('credit_score', 0),
+                    fico_score=data.get('fico_score', 0),
+                    dti_ratio=float(data.get('dti_ratio', 0.0)),  # Convert Decimal to float
+                    monthly_expenses=float(data.get('monthly_expenses', 0.0)),  # Convert Decimal to float
+                    income_sources=[float(income) for income in data.get('income_sources', [0.0] * 5)],  # Convert list of Decimals to floats
+                    loan_amount_requested=float(data.get('loan_amount_requested', 0.0)),  # Convert Decimal to float
+                    loan_term=data.get('loan_term', 0),  # e.g., 15 years, 30 years
+                    loan_down_payment=float(data.get('loan_down_payment', 0.0)),  # Convert Decimal to float
+                    loan_interest_preference=data.get('loan_interest_preference', 'fixed'),  # e.g., 'fixed' or 'variable'
+                    llm_recommendation=data.get('llm_recommendation', ''),
+                    phone_number=data.get('phone_number', ''),
+                    email=data.get('email', ''),
+                    ssn=data.get('ssn', ''),
+                    marital_status=data.get('marital_status', '')
                 )
                 client.total_income = float(data.get('total_income', 0.0))  # Load total_income
                 return client
@@ -148,6 +181,7 @@ class Client:
 
     def to_dict(self):
         return {
+            'id': self.id,
             'name': self.name,
             'user_username': self.user_username,
             'credit_score': self.credit_score,
@@ -160,5 +194,9 @@ class Client:
             'loan_term': self.loan_term,
             'loan_down_payment': self.loan_down_payment,
             'loan_interest_preference': self.loan_interest_preference,
-            'llm_recommendation': self.llm_recommendation
+            'llm_recommendation': self.llm_recommendation,
+            'phone_number': self.phone_number,
+            'email': self.email,
+            'ssn': self.ssn,
+            'marital_status': self.marital_status
         }

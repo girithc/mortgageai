@@ -1,6 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+// import { useLocation, useSearchParams } from 'react-router-dom';
+import queryString from "query-string";
+import { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   Dialog, 
@@ -32,43 +34,52 @@ export default function LoanDetailsPage() {
   const [documents, setDocuments] = useState<UploadedDocument[]>([]);
   const [selectedDocument, setSelectedDocument] = useState<UploadedDocument | null>(null);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("firstimer-alice");
+  const [activeTab, setActiveTab] = useState("0");
+  const [loanDetails, setLoansDetail] = useState({
+    loanNumber: "",
+    loanType: "",
+    loanPurpose: "",
+    borrower: "",
+    loanAmount: "",
+    propertyPrice: "",
+    ltv: "",
+    dti: "",
+    borrowers: []
+  })
+  
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  // const location = useLocation();
+
+
+  useEffect(() => {
+      let base_url = process.env.REACT_APP_SERVER_URL || "http://localhost:5000"
+      const loadApplication = async () => {
+
+        // const searchParams = new URLSearchParams(location.search);
+        const queries = queryString.parse(window.location.search);
+        
+        // Make the HTTP request
+        const response = await fetch(`${base_url}/application/${queries.loan_id}`);
+          
+        // Check if the request was successful
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        
+        // Parse the JSON response
+        const data = await response.json();
+
+        setLoansDetail(data)
+      }
+
+      loadApplication()
+  }, [])
+
 
   // Borrower data
   const borrowers = ["Alice Firstimer", "John Homeowner", "Second buyer"];
   const categories = ["Income", "Asset", "Credit"];
   
-  const borrowerDetails = {
-    "firstimer-alice": {
-      firstName: "Alice",
-      lastName: "Firstimer",
-      email: "alice@gmail.com",
-      ssn: "***-**-3456",
-      maritalStatus: "Married",
-      phoneNo: "(408) 239-1921"
-    },
-    "homeowner-john": {
-      firstName: "John",
-      lastName: "Homeowner",
-      email: "john@example.com",
-      ssn: "***-**-7890",
-      maritalStatus: "Married",
-      phoneNo: "(408) 555-4321"
-    }
-  };
-
-  // Loan details
-  const loanDetails = {
-    loanNumber: "02567891",
-    loanType: "Conventional",
-    loanPurpose: "Purchase",
-    borrower: "Alice Firstimer",
-    loanAmount: "$1,000,000",
-    propertyPrice: "$1,350,000",
-    ltv: "74%",
-    dti: "38%"
-  };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -107,7 +118,7 @@ export default function LoanDetailsPage() {
   };
 
   const renderBorrowerDetails = (tabKey: string) => {
-    const details = borrowerDetails[tabKey as keyof typeof borrowerDetails];
+    const details = loanDetails.borrowers[Number(tabKey)];
     
     return (
       <div className="p-4 border rounded-lg mt-4">
@@ -229,19 +240,23 @@ export default function LoanDetailsPage() {
 
             <Tabs defaultValue="firstimer-alice" value={activeTab} onValueChange={setActiveTab} className="mt-4">
               <TabsList>
-                <TabsTrigger value="firstimer-alice" className="text-purple-600 data-[state=active]:border-b-2 data-[state=active]:border-purple-600">
+                {
+                loanDetails.borrowers.map((item, idx) => (<TabsTrigger value={`${idx}`} className="text-purple-600 data-[state=active]:border-b-2 data-[state=active]:border-purple-600">
+                  {item.lastName}, {item.firstName}
+                </TabsTrigger>))
+}
+                {/* <TabsTrigger value="firstimer-alice" className="text-purple-600 data-[state=active]:border-b-2 data-[state=active]:border-purple-600">
                   Firstimer, Alice
                 </TabsTrigger>
                 <TabsTrigger value="homeowner-john">
                   Homeowner, John
-                </TabsTrigger>
+                </TabsTrigger> */}
               </TabsList>
-              <TabsContent value="firstimer-alice">
-                {renderBorrowerDetails("firstimer-alice")}
-              </TabsContent>
-              <TabsContent value="homeowner-john">
-                {renderBorrowerDetails("homeowner-john")}
-              </TabsContent>
+              {
+                loanDetails.borrowers.map((item, idx)=>(<TabsContent value={`${idx}`}>
+                  {renderBorrowerDetails(`${idx}`)}
+                </TabsContent>))
+              }
             </Tabs>
           </div>
         </div>

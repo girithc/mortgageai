@@ -1,3 +1,5 @@
+import json
+import os
 from flask import Blueprint, request, jsonify, render_template
 from app.db.astra_db_upload_unstructured import handle_file_upload
 from app.db.astra_db_prompt_query import get_query_response
@@ -6,10 +8,14 @@ from app.gpt.gpt_classify_income import classify_and_extract_income_from_text
 from app.util.extract_text import extract_text_from_pdf
 from app.models.user import User
 from app.models.client import Client
+from app.models.application import Application
 from app.util.llm_prompt_maker import rate_sheets_recommendation_prompt
 from app.gpt.gpt_extract_credit import extract_credit_from_text
 
 main = Blueprint('main', __name__)
+
+
+admin_username = 'Admin_username'
 
 # Home route that renders the index page with dynamic content
 @main.route('/')
@@ -509,3 +515,172 @@ def get_client_llm_recommendation():
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+   
+@main.route('/applications', methods=['GET'])
+def get_applications():
+
+    applications = Application.get_all_applications()
+
+    data = []
+    for application in applications:
+        borrowers = []
+        for borrower_id in application.borrowers:
+            borrowers.append(Client.load_from_dynamodb(borrower_id, admin_username))
+       
+        d = application.toJSON()
+        data.append({
+            "id": d["id"],
+            "borrowers": ", ".join([f"{borrower.name}" for borrower in borrowers]),
+            "amount": d["loanAmount"],
+            "type": d["loanType"],
+            "rate": d["rate"],
+            "status": d["status"],
+            "progress": (3 / 5) * 100,
+            "lastUpdated": d["last_updated"]
+        })
+
+
+    # mock data
+    # loans = [
+    # {
+    #   "id": "L12345",
+    #   "borrowers": "Alice Firstimer and John Homeowner",
+    #   "amount": "$320,000",
+    #   "type": "Conventional",
+    #   "rate": "4.25%",
+    #   "status": "In Process",
+    #   "progress": (3 / 5) * 100,
+    #   "lastUpdated": "04/24/2025",
+    # },
+    # {
+    #   "id": "L12346",
+    #   "borrowers": "Sarah Johnson and Mark Williams",
+    #   "amount": "$450,000",
+    #   "type": "FHA",
+    #   "rate": "4.5%",
+    #   "status": "Ready for Review",
+    #   "progress": (4 / 5) * 100,
+    #   "lastUpdated": "04/23/2025",
+    # },
+    # {
+    #   "id": "L12347",
+    #   "borrowers": "David Lee and Jennifer Kim",
+    #   "amount": "$275,000",
+    #   "type": "VA",
+    #   "rate": "4%",
+    #   "status": "Pending Documents",
+    #   "progress": (2 / 5) * 100,
+    #   "lastUpdated": "04/25/2025",
+    # },
+    # {
+    #   "id": "L12348",
+    #   "borrowers": "Michael Brown and Lisa Brown",
+    #   "amount": "$380,000",
+    #   "type": "Conventional",
+    #   "rate": "4.375%",
+    #   "status": "Approved",
+    #   "progress": 100,
+    #   "lastUpdated": "04/22/2025",
+    # },
+    # {
+    #   "id": "L12349",
+    #   "borrowers": "Robert Smith",
+    #   "amount": "$210,000",
+    #   "type": "Conventional",
+    #   "rate": "4.25%",
+    #   "status": "Denied",
+    #   "progress": (3 / 5) * 100,
+    #   "lastUpdated": "04/21/2025",
+    # }]
+    return jsonify(data), 200
+
+
+@main.route('/application/<id>', methods=['GET'])
+def get_application(id):
+    application = Application.load_from_dynamodb(id)
+
+    if not application:
+        return jsonify({"error": "Application not found"}), 400
+    
+    borrowers = []
+    for borrower_id in application.borrowers:
+        borrowers.append(Client.load_from_dynamodb(borrower_id, admin_username))
+    for borrower in borrowers:
+        print("borrower: ", borrower.to_dict())
+    loanDetails = {
+        "loanNumber": application.id,
+        "loanType": application.loanType,
+        "loanPurpose": application.loanPurpose,
+        "borrower": borrowers[0].name,
+        "loanAmount": f"${application.loanAmount}",
+        "propertyPrice": f"${application.propertyPrice}",
+        "ltv": application.ltv,
+        "dti": application.dti,
+        "borrowers": [
+            {
+                "firstName": borrower.name.split()[0],
+                "lastName": borrower.name[len(borrower.name.split()[0]):].strip(),
+                "email": borrower.email,
+                "ssn": borrower.ssn,
+                "maritalStatus": borrower.marital_status,
+                "phoneNo": borrower.phone_number
+            } for borrower in borrowers
+        ]
+    }
+    return jsonify(loanDetails), 200
+
+@main.route('/applications/', methods=['POST'])
+def create_application():
+    print("request.form: ", request.form)
+    loanAmount = request.form['loanAmount']
+    loanPurpose = request.form['loanPurpose']
+    loanType = request.form['loanType']
+    # propertyAddress = request.form['propertyAddress']
+    propertyPrice = request.form['propertyPrice']
+   
+    borrowers = json.loads(request.form['borrowers'])
+    
+    files = request.files.getlist('files')  # Retrieve multiple files
+
+    # Save the uploaded files
+    upload_folder = "uploads/"  # Define your upload folder
+    os.makedirs(upload_folder, exist_ok=True)  # Ensure the folder exists
+    
+   
+
+    
+        
+
+
+
+    application = Application(loanType=loanType, loanPurpose=loanPurpose, loanAmount=loanAmount, propertyPrice=propertyPrice)
+    
+    for item in borrowers:
+        borrower = Client(
+            name=f'{item["firstname"]} {item["lastname"]}', 
+            user_username=admin_username,
+            phone_number=item["phone"],
+            email=item["email"],
+        )
+        borrower.save_to_dynamodb()
+        print("check: ", borrower.to_dict())
+        application.add_borrower(borrower.id)
+
+    print("application: ", application.toJSON())
+    
+    application.save_to_dynamodb()
+
+    for file in files:
+        if file: 
+            collection_name = f'loan_{application.id}_documents'  
+            message = handle_file_upload(file, collection_name)
+            print("message: ", message)
+
+
+
+
+    return jsonify({"success": True, "data": application.toJSON()}), 201
+ 
+
