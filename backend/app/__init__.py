@@ -1,5 +1,5 @@
 from flask import Flask, g, request
-
+from flask_cors import CORS
 from app.models.user import User, ensure_user_table_exists
 from app.models.client import Client, ensure_client_table_exists
 from app.models.application import Application, ensure_application_table_exists
@@ -7,7 +7,7 @@ from app.models.application import Application, ensure_application_table_exists
 def create_app():
     app = Flask(__name__)
 
-    
+    CORS(app)
 
     #  ─── Ensures the DynamoDB table is ready ───
     ensure_user_table_exists()
