@@ -5,11 +5,11 @@ Mortgage AI is an intelligent platform designed to streamline the mortgage loan 
 ---
 
 ## 🚀 Features
-- [ ] Sign in/Sign Up
-- [x] Loan Application Pipeline
-- [x] Create A New Loan Application
-- [x] Access Loan Application Details
-- [x] Upload Documents on Behalf of Borrower
+- [ ] Sign in/sign up
+- [x] Loan application pipeline
+- [x] Create a new loan application
+- [x] Access loan application details
+- [x] Upload documents on behalf of borrower
 - [x] Read income from uploaded documents
 - [x] Read credit report from uploaded documents
 - [ ] Generate and show recommendations
