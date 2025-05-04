@@ -1,6 +1,7 @@
 import json
 import os
 from decimal import Decimal
+import boto3
 from flask import Blueprint, request, jsonify, render_template
 from app.db.astra_db_upload_unstructured import handle_file_upload
 from app.db.astra_db_prompt_query import get_query_response
@@ -8,10 +9,12 @@ from app.db.astra_db_rate_sheets_query import get_rate_sheets_response
 from app.gpt.gpt_classify_income import classify_and_extract_income_from_text
 from app.util.extract_text import extract_text_from_pdf
 from app.models.user import User
-from app.models.client import Client
+from app.models.client import CLIENT_TABLE, Client
 from app.models.application import Application
 from app.util.llm_prompt_maker import rate_sheets_recommendation_prompt
 from app.gpt.gpt_extract_credit import extract_credit_from_text
+from app.models.client import dynamodb, CLIENT_TABLE
+from boto3.dynamodb.conditions import Key
 
 main = Blueprint('main', __name__)
 
@@ -58,6 +61,11 @@ def classify_income_file():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
+
+"""
+LLM Routes
+"""
+
 # API route to query the LLM with a question and collection name
 @main.route('/llm/query', methods=['POST'])
 def query_llm():
@@ -78,6 +86,8 @@ def query_llm():
 # API route to query rate sheets using the LLM
 @main.route('/llm/rate-sheets/query', methods=['POST'])
 def rate_sheet_query():
+
+    print("request.get_json(): ", request.get_json())   
     data = request.get_json()
     question = data.get("question")
 
@@ -90,6 +100,13 @@ def rate_sheet_query():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     
+
+
+
+
+"""
+User Routes
+"""
 # API route to create a new user
 @main.route('/user/create', methods=['POST'])
 def create_user():
@@ -159,7 +176,6 @@ def update_user():
     name = data.get('name', None)
 
     if not username:
-    
         return jsonify({'error': 'Missing username'}), 400
 
     try:
@@ -170,7 +186,7 @@ def update_user():
         if name:
             user.name = name
         
-        User.save_to_dynamodb()
+        user.save_to_dynamodb()
 
         return jsonify({
             "message": "User updated successfully",
@@ -181,6 +197,11 @@ def update_user():
     except Exception as e:      
         return jsonify({'error': str(e)}), 500
     
+
+
+"""
+Client Routes
+"""   
 # API route to add a new client to a user
 @main.route('/user/client/add', methods=['POST'])
 def add_client():
@@ -190,6 +211,7 @@ def add_client():
         return jsonify({'error': 'Unauthorized'}), 401
 
     data = request.get_json()
+
     client_name = data.get('client_name')
 
     if not client_name:
@@ -303,11 +325,37 @@ def update_client_loan_details():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@main.route('/user/client/getall', methods=['GET'])
+def get_all_clients():
+    username = request.args.get('username')
+
+    if not username:
+        return jsonify({'error': 'Missing username'}), 400
+
+    try:
+        table = dynamodb.Table(CLIENT_TABLE)
+        response = table.query(
+            KeyConditionExpression=boto3.dynamodb.conditions.Key('user_username').eq(username)
+        )
+        items = response.get('Items', [])
+        clients = []
+        for item in items:
+            client = Client.load_from_dynamodb(item['id'], username)
+            if client:
+                clients.append(client.to_dict())
+
+        return jsonify({
+            "username": username,
+            "clients": clients
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 # API route to retrieve a specific client's details
 @main.route('/user/client/get', methods=['GET'])
 def get_client():
     username = request.args.get('username')
-    client_name = request.args.get('client_name')
+    client_name = request.args.get('client_id')
 
     if not username or not client_name:
         return jsonify({'error': 'Missing username or client_name'}), 400
@@ -510,6 +558,9 @@ def get_client_llm_recommendation():
 
 
    
+"""
+Application Routes
+"""
 @main.route('/applications', methods=['GET'])
 def get_applications():
 
@@ -589,7 +640,7 @@ def get_applications():
     return jsonify(data), 200
 
 
-@main.route('/application/<id>', methods=['GET'])
+@main.route('/applications/<id>', methods=['GET'])
 def get_application(id):
     application = Application.load_from_dynamodb(id)
 

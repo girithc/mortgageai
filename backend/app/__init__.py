@@ -18,8 +18,10 @@ def create_app():
     @app.before_request
     def load_current_user():
         auth = request.headers.get('Authorization', '')
-        if auth.lower().startswith('Bearer '):
+        print("auth:", auth)
+        if auth.startswith('Bearer '):
             token = auth.split(None, 1)[1]
+            print("token:", token)
             g.current_user = User.load_from_dynamodb(token)
         else:
             g.current_user = None
