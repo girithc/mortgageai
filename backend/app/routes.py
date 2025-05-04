@@ -364,7 +364,8 @@ def read_client_income():
         client.save_to_dynamodb()
 
         return jsonify({
-            "username": user.username,
+            # "username": user.username,
+            "username": username,   
             "client": client.to_dict(),
             "read_doc_type": doc_type
         }), 200
@@ -611,12 +612,15 @@ def get_application(id):
         "dti": application.dti,
         "borrowers": [
             {
+                "id": borrower.id,
                 "firstName": borrower.name.split()[0],
                 "lastName": borrower.name[len(borrower.name.split()[0]):].strip(),
                 "email": borrower.email,
                 "ssn": borrower.ssn,
                 "maritalStatus": borrower.marital_status,
-                "phoneNo": borrower.phone_number
+                "phoneNo": borrower.phone_number,
+                "totalIncome": f"${borrower.total_income}",
+                "creditScore": borrower.credit_score,
             } for borrower in borrowers
         ]
     }

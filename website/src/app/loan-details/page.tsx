@@ -32,9 +32,11 @@ type BorrowerInfo = {
 
 export default function LoanDetailsPage() {
   const [documents, setDocuments] = useState<UploadedDocument[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedDocument, setSelectedDocument] = useState<UploadedDocument | null>(null);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("0");
+  const [uploadCategory, setUploadCategory] = useState("");
   const [loanDetails, setLoansDetail] = useState({
     loanNumber: "",
     loanType: "",
@@ -50,34 +52,39 @@ export default function LoanDetailsPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   // const location = useLocation();
 
+ const getTotalIncome = () => {
+    let totalIncome = 0;
+    loanDetails.borrowers.forEach((borrower: BorrowerInfo) => {
+      totalIncome += parseFloat(borrower.totalIncome.substring(1));
+    });
+    return totalIncome;
+  }
 
   useEffect(() => {
-      let base_url = process.env.REACT_APP_SERVER_URL || "http://localhost:5000"
-      const loadApplication = async () => {
-
-        // const searchParams = new URLSearchParams(location.search);
-        const queries = queryString.parse(window.location.search);
-        
-        // Make the HTTP request
-        const response = await fetch(`${base_url}/application/${queries.loan_id}`);
-          
-        // Check if the request was successful
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        
-        // Parse the JSON response
-        const data = await response.json();
-
-        setLoansDetail(data)
-      }
-
       loadApplication()
   }, [])
 
+  const loadApplication = async () => {
+    let base_url = process.env.REACT_APP_SERVER_URL || "http://localhost:5000"
+    // const searchParams = new URLSearchParams(location.search);
+    const queries = queryString.parse(window.location.search);
+    
+    // Make the HTTP request
+    const response = await fetch(`${base_url}/application/${queries.loan_id}`);
+      
+    // Check if the request was successful
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    
+    // Parse the JSON response
+    const data = await response.json();
+
+    setLoansDetail(data)
+  }
 
   // Borrower data
-  const borrowers = ["Alice Firstimer", "John Homeowner", "Second buyer"];
+  // const borrowers = ["Alice Firstimer", "John Homeowner", "Second buyer"];
   const categories = ["Income", "Asset", "Credit"];
   
 
@@ -94,6 +101,8 @@ export default function LoanDetailsPage() {
     };
 
     setSelectedDocument(newDocument);
+
+
   };
 
   const updateDocumentDetails = (id: string, borrower: string, category: string) => {
@@ -107,13 +116,68 @@ export default function LoanDetailsPage() {
     }
   };
 
-  const handleFinalUpload = () => {
+  const handleFinalUpload = async () => {
     if (selectedDocument && 
-        selectedDocument.borrower !== "Select a borrower" && 
+        // selectedDocument.borrower !== "Select a borrower" && 
         selectedDocument.category !== "Select a category") {
       setDocuments(prev => [...prev, selectedDocument]);
       setIsUploadDialogOpen(false);
       setSelectedDocument(null);
+
+
+
+      let base_url = process.env.REACT_APP_SERVER_URL || "http://localhost:5000"
+
+      // Create a FormData object
+      const formData = new FormData();
+      formData.append("username", "Admin_username");
+      formData.append("client_name", loanDetails.borrowers[Number(activeTab)].id);
+      
+      // Append selected files
+      if (selectedFiles.length > 0) {
+        // selectedFiles.forEach((file) => {
+        formData.append("file", selectedFiles[0]); // Use the same key for multiple files
+        // });
+      }
+
+      try {
+        let url = ""
+        if (uploadCategory === "Income")
+          url = `${base_url}/user/client/read-income`
+        else if (uploadCategory === "Asset") 
+          url = `${base_url}/user/client/read-asset`
+        else if (uploadCategory === "Credit")
+          url = `${base_url}/user/client/read-credit-report`
+        console.log("uploadCategory: ", uploadCategory)
+        console.log("URL: ", url)
+
+        // Make the HTTP request
+        const response = await fetch(url, {
+          method: "POST",
+          body: formData, // Send the FormData object
+        });
+
+        // Check if the request was successful
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        // Parse the JSON response
+        const data = await response.json();
+        console.log("Response from server:", data);
+
+        loadApplication()
+        // Reset the form fields
+        // setPropertyPrice("");
+        // setLoanAmount("");
+        // setLoanType("CONVENTIONAL");
+        // setLoanTerm("30yrs");
+        // setLoanPurpose("PURCHASE");
+        // setBorrowers([{ firstname: "", lastname: "", phone: "", email: "" }]);
+        // setIsModalOpen(false);
+      } catch (error) {
+        console.error("Error submitting form:", error);
+      }
     }
   };
 
@@ -147,6 +211,14 @@ export default function LoanDetailsPage() {
             <label className="block text-sm font-medium text-gray-500 mb-1">Phone No</label>
             <div className="text-lg">{details.phoneNo}</div>
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-500 mb-1">Income</label>
+            <div className="text-lg">{details.totalIncome}</div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-500 mb-1">Credit Score</label>
+            <div className="text-lg">{details.creditScore}</div>
+          </div>
         </div>
       </div>
     );
@@ -158,7 +230,7 @@ export default function LoanDetailsPage() {
         {/* Header Section */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center space-x-4">
-            <h1 className="text-xl font-semibold">Alice Firstimer and John Homeowner</h1>
+            <h1 className="text-xl font-semibold">{loanDetails.borrowers.map((item) => {return `${item.firstName} ${item.lastName}`}).join(" and ")}</h1>
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500">
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
               <polyline points="22 4 12 14.01 9 11.01"></polyline>
@@ -168,12 +240,12 @@ export default function LoanDetailsPage() {
 {/*             <Button variant="outline" className="text-sm">
               Documents
             </Button> */}
-            <Button 
+            {/* <Button 
               className="bg-[#7C3AED] text-white hover:bg-[#6D28D9]"
               onClick={() => setIsUploadDialogOpen(true)}
             >
               Upload Document
-            </Button>
+            </Button> */}
           </div>
         </div>
 
@@ -235,8 +307,10 @@ export default function LoanDetailsPage() {
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                 <polyline points="22 4 12 14.01 9 11.01"></polyline>
               </svg>
-              <span className="ml-2">Alice Firstimer and John Homeowner</span>
+              <span className="ml-2">{loanDetails.borrowers.map((item) => {return `${item.firstName} ${item.lastName}`}).join(" and ")}</span>
             </div>
+            <div className="text-lg font-bold text-gray-500 mb-4">Total Income: ${getTotalIncome().toFixed(2)}</div>
+            {/* <div className="text-sm text-gray-500 mb-4">Total Income: {loanDetails.borrowers.reduce((acc, borrower) => acc + parseFloat(borrower.totalIncome), 0)}</div> */}
 
             <Tabs defaultValue="firstimer-alice" value={activeTab} onValueChange={setActiveTab} className="mt-4">
               <TabsList>
@@ -254,6 +328,14 @@ export default function LoanDetailsPage() {
               </TabsList>
               {
                 loanDetails.borrowers.map((item, idx)=>(<TabsContent value={`${idx}`}>
+                  <div className="flex space-x-2 justify-end">
+                    <Button 
+                      className="bg-[#7C3AED] text-white hover:bg-[#6D28D9]"
+                      onClick={() => setIsUploadDialogOpen(true)}
+                    >
+                      Upload Document
+                    </Button>
+                  </div>
                   {renderBorrowerDetails(`${idx}`)}
                 </TabsContent>))
               }
@@ -324,7 +406,13 @@ export default function LoanDetailsPage() {
                 <input 
                   type="file" 
                   ref={fileInputRef} 
-                  onChange={handleFileUpload} 
+                  // onChange={handleFileUpload} 
+                  onChange={(e) => {
+                    if (e.target.files) {
+                      handleFileUpload(e); // Call the file upload handler
+                      setSelectedFiles(Array.from(e.target.files)); // Convert FileList to an array
+                    }
+                  }}
                   className="hidden" 
                   accept=".pdf,.jpg,.png,.tif"
                 />
@@ -340,7 +428,7 @@ export default function LoanDetailsPage() {
               
               {selectedDocument && (
                 <div className="space-y-4">
-                  <div>
+                  {/* <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Borrower</label>
                     <select 
                       value={selectedDocument.borrower}
@@ -356,16 +444,19 @@ export default function LoanDetailsPage() {
                         <option key={borrower} value={borrower}>{borrower}</option>
                       ))}
                     </select>
-                  </div>
+                  </div> */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                     <select 
                       value={selectedDocument.category}
-                      onChange={(e) => updateDocumentDetails(
-                        selectedDocument.id, 
-                        selectedDocument.borrower, 
-                        e.target.value
-                      )}
+                      onChange={(e) => {
+                        updateDocumentDetails(
+                          selectedDocument.id, 
+                          selectedDocument.borrower, 
+                          e.target.value
+                        )
+                        setUploadCategory(e.target.value);
+                      }}
                       className="w-full border rounded-md p-2"
                     >
                       <option value="Select a category">Select a category</option>
@@ -388,7 +479,7 @@ export default function LoanDetailsPage() {
                       className="bg-[#7C3AED] text-white hover:bg-[#6D28D9]"
                       disabled={
                         !selectedDocument || 
-                        selectedDocument.borrower === "Select a borrower" || 
+                        // selectedDocument.borrower === "Select a borrower" || 
                         selectedDocument.category === "Select a category"
                       }
                       onClick={handleFinalUpload}

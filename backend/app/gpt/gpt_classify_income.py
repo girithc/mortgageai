@@ -13,6 +13,7 @@ def classify_and_extract_income_from_text(text: str) -> tuple:
         "DO NOT use markdown, code fences, or explanations.\n\n"
         "Your response must follow this exact JSON structure:\n"
         "{\n"
+        "  \"name\": \"<full name of the owner of this document>\" or \"Unknown\",\n"
         "  \"document_type\": \"<label>\" or \"Unknown\",\n"
         "  \"hourly_rate\": \"<amount>\" or \"Unknown\",\n"
         "  \"hours_worked\": \"<amount>\" or \"Unknown\",\n"
