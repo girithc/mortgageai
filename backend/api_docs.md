@@ -175,8 +175,7 @@ This document outlines all available API endpoints, their request parameters, an
   "fico_score": 0,
   "dti_ratio": 0.0,
   "monthly_expenses": 0.0,
-  "index": 0,
-  "new_income": 12000
+  "income_sources": [["source1", 12000], ["source2", 15000]]
 }
 ```
 - **Response**:
@@ -208,7 +207,6 @@ This document outlines all available API endpoints, their request parameters, an
   - `file`: PDF income document (required)
   - `username`: associated user (required)
   - `client_name`: client to update (required)
-  - `index`: which income index to update (required)
 - **Response**:
 ```json
 {
