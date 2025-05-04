@@ -1,0 +1,27 @@
+# fly.toml app configuration file generated for mortgage-ai on 2025-05-04T11:46:11-07:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'mortgage-ai'
+primary_region = 'sjc'
+
+[build]
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false  
+  auto_start_machines = true
+  min_machines_running = 1    
+  processes= ['app']
+
+[[vm]]
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 1
+
+[env]
+UNSTRUCTURED_API_URL = "https://api.unstructuredapp.io/general/v0/general"
+ASTRA_DB_API_ENDPOINT = "https://d525a666-5423-4b7e-aa84-12e67c7a765a-us-east-2.apps.astra.datastax.com"
+AWS_REGION = "us-west-2"
