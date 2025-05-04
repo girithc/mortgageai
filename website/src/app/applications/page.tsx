@@ -68,7 +68,7 @@ export default function ApplicationPage() {
   };
   
   useEffect(() => {
-      let base_url = process.env.REACT_APP_SERVER_URL || "http://localhost:5000"
+      let base_url ="http://127.0.0.1:5000"
       const loadApplications = async () => {
         // Make the HTTP request
         const response = await fetch(`${base_url}/applications`);
@@ -106,7 +106,7 @@ export default function ApplicationPage() {
       borrowers,
     });
     
-    let base_url = process.env.REACT_APP_SERVER_URL || "http://localhost:5000"
+    let base_url = "http://127.0.0.1:5000"
 
     // Create a FormData object
     const formData = new FormData();
@@ -132,6 +132,8 @@ export default function ApplicationPage() {
         method: "POST",
         body: formData, // Send the FormData object
       });
+
+      console.log("response ", response.body)
 
       // Check if the request was successful
       if (!response.ok) {

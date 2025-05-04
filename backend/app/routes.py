@@ -677,56 +677,50 @@ def get_application(id):
     }
     return jsonify(loanDetails), 200
 
-@main.route('/applications/', methods=['POST'])
+@main.route('/applications', methods=['POST'])
 def create_application():
-    print("request.form: ", request.form)
-    loanAmount = request.form['loanAmount']
-    loanPurpose = request.form['loanPurpose']
-    loanType = request.form['loanType']
-    # propertyAddress = request.form['propertyAddress']
-    propertyPrice = request.form['propertyPrice']
-   
-    borrowers = json.loads(request.form['borrowers'])
-    
-    files = request.files.getlist('files')  # Retrieve multiple files
+    try:
+        print("request.form: ", request.form)
 
-    # Save the uploaded files
-    upload_folder = "uploads/"  # Define your upload folder
-    os.makedirs(upload_folder, exist_ok=True)  # Ensure the folder exists
-    
-   
+        loanAmount = request.form['loanAmount']
+        loanPurpose = request.form['loanPurpose']
+        loanType = request.form['loanType']
+        propertyPrice = request.form['propertyPrice']
+        borrowers = json.loads(request.form['borrowers'])
+        files = request.files.getlist('files')
 
-    
-        
+        upload_folder = "uploads/"
+        os.makedirs(upload_folder, exist_ok=True)
 
-
-
-    application = Application(loanType=loanType, loanPurpose=loanPurpose, loanAmount=loanAmount, propertyPrice=propertyPrice)
-    
-    for item in borrowers:
-        borrower = Client(
-            name=f'{item["firstname"]} {item["lastname"]}', 
-            user_username=admin_username,
-            phone_number=item["phone"],
-            email=item["email"],
+        application = Application(
+            loanType=loanType,
+            loanPurpose=loanPurpose,
+            loanAmount=loanAmount,
+            propertyPrice=propertyPrice
         )
-        borrower.save_to_dynamodb()
-        print("check: ", borrower.to_dict())
-        application.add_borrower(borrower.id)
 
-    print("application: ", application.toJSON())
-    
-    application.save_to_dynamodb()
+        for item in borrowers:
+            borrower = Client(
+                name=f'{item["firstname"]} {item["lastname"]}', 
+                user_username=admin_username,
+                phone_number=item["phone"],
+                email=item["email"],
+            )
+            borrower.save_to_dynamodb()
+            print("check: ", borrower.to_dict())
+            application.add_borrower(borrower.id)
 
-    for file in files:
-        if file: 
-            collection_name = f'loan_{application.id}_documents'  
-            message = handle_file_upload(file, collection_name)
-            print("message: ", message)
+        print("application: ", application.toJSON())
+        application.save_to_dynamodb()
 
+        for file in files:
+            if file:
+                collection_name = f'loan_{application.id}_documents'
+                message = handle_file_upload(file, collection_name)
+                print("message: ", message)
 
+        return jsonify({"success": True, "data": application.toJSON()}), 201
 
-
-    return jsonify({"success": True, "data": application.toJSON()}), 201
- 
-
+    except Exception as e:
+        print("Error during application creation:", str(e))
+        return jsonify({"success": False, "error": str(e)}), 500
