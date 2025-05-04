@@ -15,9 +15,10 @@ from app.util.llm_prompt_maker import rate_sheets_recommendation_prompt
 from app.gpt.gpt_extract_credit import extract_credit_from_text
 from app.models.client import dynamodb, CLIENT_TABLE
 from boto3.dynamodb.conditions import Key
+from flask_cors import CORS
 
 main = Blueprint('main', __name__)
-
+CORS(main)
 
 admin_username = 'Admin_username'
 
