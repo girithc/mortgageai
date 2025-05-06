@@ -452,6 +452,126 @@ Uploads and processes a credit report document for a borrower.
    ```
    - The system will analyze all application data and provide a recommendation
 
+### Complete Testing Flow
+
+To thoroughly test the API workflow, follow these steps in sequence:
+
+1. **Create a new user**
+   ```
+   POST /api/user
+   ```
+   Request body:
+   ```
+   username: johnsmith
+   name: John Smith
+   ```
+   Expected response: 201 Created with user details
+
+2. **Create a new mortgage application**
+   ```
+   POST /api/applications
+   ```
+   Request body:
+   ```
+   loan_amount: 450000
+   loan_down_payment: 90000
+   loan_interest_preference: FIXED
+   loan_term: 30
+   loan_purpose: PURCHASE
+   loan_type: CONVENTIONAL
+   property_price: 540000
+   borrowers: [{"firstname":"Michael","lastname":"Johnson","email":"michael.johnson@example.com","phone":"555-123-4567","ssn":"123-45-6789"},{"firstname":"Sarah","lastname":"Johnson","email":"sarah.johnson@example.com","phone":"555-987-6543","ssn":"987-65-4321"}]
+   ```
+   Expected response: 200 OK with application ID
+   - Save `applicationId` from response for future requests
+
+3. **Get application details**
+   ```
+   GET /api/applications/{applicationId}
+   ```
+   Expected response: 200 OK with application details
+   - Save `primaryBorrowerId` and `coBorrowerId` from response
+
+4. **Update application with property details**
+   ```
+   PUT /api/applications/{applicationId}
+   ```
+   Request body:
+   ```
+   property_address: 123 Main Street, Anytown, CA 94088
+   property_type: SINGLE_FAMILY
+   occupancy_type: PRIMARY_RESIDENCE
+   ```
+   Expected response: 200 OK with updated application
+
+5. **Update primary borrower information**
+   ```
+   PUT /api/borrowers/{primaryBorrowerId}
+   ```
+   Request body:
+   ```
+   monthly_expenses: 4500
+   income_sources: [["SALARY", 120000], ["RENTAL_INCOME", 24000]]
+   marital_status: MARRIED
+   credit_score: 745
+   fico_score: 752
+   ```
+   Expected response: 200 OK with updated borrower details
+
+6. **Update co-borrower information**
+   ```
+   PUT /api/borrowers/{coBorrowerId}
+   ```
+   Request body:
+   ```
+   monthly_expenses: 2800
+   income_sources: [["SALARY", 95000], ["BONUS", 15000]]
+   marital_status: MARRIED
+   credit_score: 732
+   fico_score: 738
+   ```
+   Expected response: 200 OK with updated borrower details
+
+7. **Upload income document for primary borrower**
+   ```
+   POST /api/borrower/read-income
+   ```
+   Request body:
+   ```
+   borrower_id: {primaryBorrowerId}
+   file: [w2.pdf]
+   ```
+   Expected response: 200 OK with updated borrower details and document type
+
+8. **Upload credit report for primary borrower**
+   ```
+   POST /api/borrower/read-credit-report
+   ```
+   Request body:
+   ```
+   borrower_id: {primaryBorrowerId}
+   file: [credit_report.pdf]
+   ```
+   Expected response: 200 OK with updated borrower details
+
+9. **Generate new recommendation**
+   ```
+   GET /api/applications/{applicationId}/new-recommendation
+   ```
+   Expected response: 200 OK with application details and recommendation
+
+10. **Verify recommendation**
+    ```
+    GET /api/applications/{applicationId}/recommendation
+    ```
+    Expected response: 200 OK with stored recommendation
+
+11. **Get all applications** (verify your application appears in the list)
+    ```
+    GET /api/applications
+    ```
+    Expected response: 200 OK with array of applications
+
 ### Retrieving Application Status
 
 1. **Get all applications** for the current user
