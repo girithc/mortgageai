@@ -26,7 +26,13 @@ def rate_sheets_recommendation_prompt(credit_score: int,
         str: A formatted prompt string.
     """
     return f"""
-    You are a mortgage lending expert. Based on the following mortgage loan application, recommend the most suitable wholesale mortgage lender(s), including their program names if available, and explain why they are a good fit. Consider credit score, DTI, loan preferences, and loan-to-value ratio. Provide specific, up-to-date recommendations where possible.
+    You are an expert mortgage underwriter assistant.
+    Evaluate whether this application is likely to get pre-approved by an AUS (e.g., DU or LP) based on common underwriting guidelines. If likely approved, explain why. If not approved, explain why not and give specific, practical advice on how the borrower could improve their application to increase approval chances such as conditional documents.
+    Based on the following mortgage loan application, recommend the most suitable wholesale mortgage lender(s), including their program names if available, and explain why they are a good fit. Provide specific, up-to-date recommendations where possible.
+    Write a detailed explanation in 1000 words or more. Cover all key aspects.
+    Do not include any disclaimers or generic information.
+    Do not include any hypothetical scenarios or examples.
+    Do not include typical AI disclaimers or generic information.
     
     Loan Application Details:
     Loan Amount Requested: ${loan_amount_requested}
