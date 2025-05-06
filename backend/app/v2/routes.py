@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 from flask import Blueprint, request, jsonify
 from flask_cors import CORS
@@ -67,6 +68,9 @@ def create_application():
         loan_type = request.form.get('loan_type', "CONVENTIONAL")
         property_price = request.form.get('property_price')
         borrowers = json.loads(request.form.get('borrowers'))
+
+        if not loan_down_payment:
+            loan_down_payment = float(property_price) - float(loan_amount)
 
         application = Application(
             loan_amount=float(loan_amount),
@@ -153,6 +157,10 @@ def update_application(id):
         if status:
             application.status = status
 
+        if loan_amount or property_price:
+            application.ltv = (application.loan_amount / application.property_price) * 100 if application.property_price else 0
+
+        application.last_updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         application.save_to_dynamodb()
 
         return jsonify({'message': 'Application updated successfully', 'application': application.to_dict()}), 200
@@ -304,6 +312,7 @@ def update_borrower(id):
             application = Application.get_application_by_borrower_id(borrower.id)
             if application:
                 application.update_income_and_dti()
+                application.last_updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 application.save_to_dynamodb()
 
         return jsonify({'message': 'Borrower updated successfully', 'borrower': borrower.to_dict()}), 200
@@ -358,6 +367,7 @@ def read_client_income():
         application = Application.get_application_by_borrower_id(borrower.id)
         if application:
             application.update_income_and_dti()
+            application.last_updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             application.save_to_dynamodb()
 
         return jsonify({
@@ -405,6 +415,7 @@ def read_client_credit_report():
         application = Application.get_application_by_borrower_id(borrower.id)
         if application:
             application.update_income_and_dti()
+            application.last_updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             application.save_to_dynamodb()
 
         return jsonify({
@@ -449,6 +460,7 @@ def get_new_recommendation(id):
             ))
         
         application.llm_recommendation = recommendation
+        application.last_updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         application.save_to_dynamodb()
 
         return jsonify({
