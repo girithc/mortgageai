@@ -23,7 +23,7 @@ export default function AuthPage() {
     console.log(isLogin ? "Logging in with" : "Registering with", email, password);
 
     setTimeout(() => {
-      window.location.href = "/dashboard"; // Mock navigation
+      window.location.href = "/applications"; // Mock navigation
     }, 1000);
   };
 
