@@ -246,45 +246,48 @@ class Application:
             print(f"Error loading application from DynamoDB: {e}")
             return None
 
-    @staticmethod
-    def get_all_applications() -> list['Application']:
-        """
-        Scan the entire APPLICATION_TABLE and return a list of Application instances.
-        """
-        table = dynamodb.Table(APPLICATION_TABLE)
-        try:
-            resp = table.scan()
-            items = resp.get('Items', [])
-            return [
-                Application(
-                    id=item['id'],
-                    loan_type=item['loan_type'],
-                    loan_amount=item['loan_amount'],
-                    loan_purpose=item['loan_purpose'],
-                    property_price=item['property_price'],
-                    property_address=item['property_address'],
-                    property_type=item['property_type'],
-                    occupancy_type=item['occupancy_type'],
-                    ltv=float(item['ltv']),
-                    dti=float(item['dti']),
-                    rate=float(item['rate']),  # Convert to float
-                    status=item['status'],
-                    primary_borrower_id=item.get('primary_borrower_id', ""),  # Load new field
-                    co_borrowers_id=item.get('co_borrowers_id', []),  # Load new field
-                    loan_term=item.get('loan_term'),
-                    loan_down_payment=item.get('loan_down_payment'),
-                    loan_interest_preference=item.get('loan_interest_preference'),
-                    llm_recommendation=item.get('llm_recommendation', ""),
-                    total_income=float(item.get('total_income', 0.0)),
-                    total_monthly_expenses=float(item.get('total_monthly_expenses', 0.0)),
-                    last_updated=item['last_updated'],
-                    created_at=item['created_at']
-                )
-                for item in items
-            ]
-        except ClientError as e:
-            print(f"Error scanning applications table: {e}")
-            return []
+    # Patch for application.py
+# Update the get_all_applications method to use the correct field names
+
+@staticmethod
+def get_all_applications() -> list['Application']:
+    """
+    Scan the entire APPLICATION_TABLE and return a list of Application instances.
+    """
+    table = dynamodb.Table(APPLICATION_TABLE)
+    try:
+        resp = table.scan()
+        items = resp.get('Items', [])
+        return [
+            Application(
+                id=item['id'],
+                loan_type=item.get('loan_type', item.get('loanType', 'CONVENTIONAL')),  # Handle both field names
+                loan_amount=float(item.get('loan_amount', item.get('loanAmount', 0.0))),
+                loan_purpose=item.get('loan_purpose', item.get('loanPurpose', 'PURCHASE')),
+                property_price=float(item.get('property_price', item.get('propertyPrice', 0.0))),
+                property_address=item.get('property_address', item.get('propertyAddress', '')),
+                property_type=item.get('property_type', item.get('propertyType', 'SINGLE_FAMILY')),
+                occupancy_type=item.get('occupancy_type', item.get('occupancyType', 'PRIMARY')),
+                ltv=float(item.get('ltv', 0.0)),
+                dti=float(item.get('dti', 0.0)),
+                rate=float(item.get('rate', 0.0)),
+                status=item.get('status', 'INIT'),
+                primary_borrower_id=item.get('primary_borrower_id', ''),
+                co_borrowers_id=item.get('co_borrowers_id', []),
+                loan_term=item.get('loan_term', 30),
+                loan_down_payment=float(item.get('loan_down_payment', 0.0)),
+                loan_interest_preference=item.get('loan_interest_preference', 'FIXED'),
+                llm_recommendation=item.get('llm_recommendation', ''),
+                total_income=float(item.get('total_income', 0.0)),
+                total_monthly_expenses=float(item.get('total_monthly_expenses', 0.0)),
+                last_updated=item.get('last_updated', datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+                created_at=item.get('created_at', datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            )
+            for item in items
+        ]
+    except ClientError as e:
+        print(f"Error scanning applications table: {e}")
+        return []
 
     @staticmethod
     def get_application_by_borrower_id(borrower_id):

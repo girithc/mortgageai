@@ -1,6 +1,5 @@
 "use client";
 
-// import { useLocation, useSearchParams } from 'react-router-dom';
 import queryString from "query-string";
 import { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,7 @@ import {
   DialogHeader, 
   DialogTitle 
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; //use "npx shadcn@latest add tabs" in terminal for this import
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type UploadedDocument = {
   id: string;
@@ -21,13 +20,49 @@ type UploadedDocument = {
   uploadedAt: Date;
 };
 
+type IncomeSource = {
+  source_type: string;
+  income: string;
+};
+
 type BorrowerInfo = {
-  firstName: string;
-  lastName: string;
+  id: string;
+  first_name: string;
+  last_name: string;
   email: string;
   ssn: string;
-  maritalStatus: string;
-  phoneNo: string;
+  marital_status: string;
+  phone_no: string;
+  total_income: string;
+  credit_score: number;
+  fico_score: number;
+  dti_ratio: number;
+  monthly_expenses: string;
+  income_sources: IncomeSource[];
+};
+
+type LoanDetails = {
+  loan_number: string;
+  loan_type: string;
+  loan_purpose: string;
+  primary_borrower: string;
+  loan_amount: string;
+  property_price: string;
+  ltv: number;
+  dti: number;
+  loan_term: number;
+  loan_down_payment: number;
+  loan_interest_preference: string;
+  status: string;
+  rate: number;
+  primary_borrower_id: string;
+  co_borrowers_id: string[];
+  total_income: number;
+  total_monthly_expenses: number;
+  llm_recommendation: string;
+  last_updated: string;
+  created_at: string;
+  borrowers: BorrowerInfo[];
 };
 
 export default function LoanDetailsPage() {
@@ -37,56 +72,91 @@ export default function LoanDetailsPage() {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("0");
   const [uploadCategory, setUploadCategory] = useState("");
-  const [loanDetails, setLoansDetail] = useState({
-    loanNumber: "",
-    loanType: "",
-    loanPurpose: "",
-    borrower: "",
-    loanAmount: "",
-    propertyPrice: "",
-    ltv: "",
-    dti: "",
+  const [loanDetails, setLoanDetails] = useState<LoanDetails>({
+    loan_number: "",
+    loan_type: "",
+    loan_purpose: "",
+    primary_borrower: "",
+    loan_amount: "",
+    property_price: "",
+    ltv: 0,
+    dti: 0,
+    loan_term: 0,
+    loan_down_payment: 0,
+    loan_interest_preference: "",
+    status: "",
+    rate: 0,
+    primary_borrower_id: "",
+    co_borrowers_id: [],
+    total_income: 0,
+    total_monthly_expenses: 0,
+    llm_recommendation: "",
+    last_updated: "",
+    created_at: "",
     borrowers: []
-  })
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
   
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  // const location = useLocation();
 
- const getTotalIncome = () => {
+  const getTotalIncome = () => {
     let totalIncome = 0;
-    loanDetails.borrowers.forEach((borrower: BorrowerInfo) => {
-      totalIncome += parseFloat(borrower.totalIncome.substring(1));
-    });
+    try {
+      loanDetails.borrowers.forEach((borrower: BorrowerInfo) => {
+        // Handle different formats of income values
+        if (typeof borrower.total_income === 'string') {
+          // Remove $ and commas if present
+          const cleanedIncome = borrower.total_income.replace(/[$,]/g, '');
+          totalIncome += parseFloat(cleanedIncome);
+        } else if (typeof borrower.total_income === 'number') {
+          totalIncome += borrower.total_income;
+        }
+      });
+    } catch (error) {
+      console.error("Error calculating total income:", error);
+    }
     return totalIncome;
-  }
+  };
 
   useEffect(() => {
-      loadApplication()
-  }, [])
+    loadApplication();
+  }, []);
 
   const loadApplication = async () => {
-    let base_url = process.env.REACT_APP_SERVER_URL || "http://localhost:5000"
-    // const searchParams = new URLSearchParams(location.search);
-    const queries = queryString.parse(window.location.search);
+    setIsLoading(true);
+    setError("");
     
-    // Make the HTTP request
-    const response = await fetch(`${base_url}/application/${queries.loan_id}`);
+    try {
+      const base_url = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000";
+      const queries = queryString.parse(window.location.search);
       
-    // Check if the request was successful
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
+      if (!queries.loan_id) {
+        throw new Error("No loan ID provided");
+      }
+      
+      // Make the HTTP request to the correct endpoint
+      const response = await fetch(`${base_url}/api/applications/${queries.loan_id}`);
+        
+      // Check if the request was successful
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      // Parse the JSON response
+      const data = await response.json();
+      console.log("Loan details loaded:", data);
+      
+      setLoanDetails(data);
+    } catch (error) {
+      console.error("Failed to load loan details:", error);
+      setError("Failed to load loan details. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
-    
-    // Parse the JSON response
-    const data = await response.json();
+  };
 
-    setLoansDetail(data)
-  }
-
-  // Borrower data
-  // const borrowers = ["Alice Firstimer", "John Homeowner", "Second buyer"];
   const categories = ["Income", "Asset", "Credit"];
-  
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -95,14 +165,12 @@ export default function LoanDetailsPage() {
     const newDocument: UploadedDocument = {
       id: crypto.randomUUID(),
       file,
-      borrower: "Select a borrower",
+      borrower: loanDetails.borrowers[parseInt(activeTab)].id,
       category: "Select a category",
       uploadedAt: new Date()
     };
 
     setSelectedDocument(newDocument);
-
-
   };
 
   const updateDocumentDetails = (id: string, borrower: string, category: string) => {
@@ -117,83 +185,92 @@ export default function LoanDetailsPage() {
   };
 
   const handleFinalUpload = async () => {
-    if (selectedDocument && 
-        // selectedDocument.borrower !== "Select a borrower" && 
-        selectedDocument.category !== "Select a category") {
+    if (selectedDocument && selectedDocument.category !== "Select a category" && selectedFiles.length > 0) {
       setDocuments(prev => [...prev, selectedDocument]);
-      setIsUploadDialogOpen(false);
-      setSelectedDocument(null);
-
-
-
-      let base_url = process.env.REACT_APP_SERVER_URL || "http://localhost:5000"
-
-      // Create a FormData object
-      const formData = new FormData();
-      formData.append("username", "Admin_username");
-      formData.append("client_name", loanDetails.borrowers[Number(activeTab)].id);
       
-      // Append selected files
-      if (selectedFiles.length > 0) {
-        // selectedFiles.forEach((file) => {
-        formData.append("file", selectedFiles[0]); // Use the same key for multiple files
-        // });
-      }
-
       try {
-        let url = ""
-        if (uploadCategory === "Income")
-          url = `${base_url}/user/client/read-income`
-        else if (uploadCategory === "Asset") 
-          url = `${base_url}/user/client/read-asset`
-        else if (uploadCategory === "Credit")
-          url = `${base_url}/user/client/read-credit-report`
-        console.log("uploadCategory: ", uploadCategory)
-        console.log("URL: ", url)
-
+        const base_url = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000";
+        
+        // Create a FormData object
+        const formData = new FormData();
+        formData.append("borrower_id", loanDetails.borrowers[parseInt(activeTab)].id);
+        
+        // Append the file
+        formData.append("file", selectedFiles[0]);
+        
+        let endpoint = "";
+        switch (uploadCategory) {
+          case "Income":
+            endpoint = `${base_url}/api/borrower/read-income`;
+            break;
+          case "Credit":
+            endpoint = `${base_url}/api/borrower/read-credit-report`;
+            break;
+          case "Asset":
+            // If you implement an asset endpoint in the future
+            endpoint = `${base_url}/api/borrower/read-asset`;
+            break;
+          default:
+            throw new Error("Invalid document category");
+        }
+        
+        console.log("Uploading to endpoint:", endpoint);
+        
         // Make the HTTP request
-        const response = await fetch(url, {
+        const response = await fetch(endpoint, {
           method: "POST",
-          body: formData, // Send the FormData object
+          body: formData,
         });
-
+        
         // Check if the request was successful
         if (!response.ok) {
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
-
+        
         // Parse the JSON response
         const data = await response.json();
         console.log("Response from server:", data);
-
-        loadApplication()
-        // Reset the form fields
-        // setPropertyPrice("");
-        // setLoanAmount("");
-        // setLoanType("CONVENTIONAL");
-        // setLoanTerm("30yrs");
-        // setLoanPurpose("PURCHASE");
-        // setBorrowers([{ firstname: "", lastname: "", phone: "", email: "" }]);
-        // setIsModalOpen(false);
+        
+        // Refresh loan details to show updated data
+        await loadApplication();
+        
+        // Reset the form
+        setIsUploadDialogOpen(false);
+        setSelectedDocument(null);
+        setSelectedFiles([]);
       } catch (error) {
-        console.error("Error submitting form:", error);
+        console.error("Error uploading document:", error);
+        alert("Failed to upload document. Please try again.");
       }
     }
   };
 
   const renderBorrowerDetails = (tabKey: string) => {
-    const details = loanDetails.borrowers[Number(tabKey)];
+    if (isLoading) {
+      return <div className="p-4 text-center">Loading borrower details...</div>;
+    }
+    
+    if (error) {
+      return <div className="p-4 text-center text-red-500">{error}</div>;
+    }
+    
+    const index = parseInt(tabKey);
+    if (!loanDetails.borrowers || !loanDetails.borrowers[index]) {
+      return <div className="p-4 text-center">No borrower details available</div>;
+    }
+    
+    const details = loanDetails.borrowers[index];
     
     return (
       <div className="p-4 border rounded-lg mt-4">
         <div className="grid grid-cols-3 gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">First name</label>
-            <div className="text-lg">{details.firstName}</div>
+            <div className="text-lg">{details.first_name}</div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">Last name</label>
-            <div className="text-lg">{details.lastName}</div>
+            <div className="text-lg">{details.last_name}</div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">Email</label>
@@ -205,24 +282,60 @@ export default function LoanDetailsPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">Marital Status</label>
-            <div className="text-lg">{details.maritalStatus}</div>
+            <div className="text-lg">{details.marital_status || 'Not specified'}</div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">Phone No</label>
-            <div className="text-lg">{details.phoneNo}</div>
+            <div className="text-lg">{details.phone_no}</div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">Income</label>
-            <div className="text-lg">{details.totalIncome}</div>
+            <div className="text-lg">{details.total_income}</div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">Credit Score</label>
-            <div className="text-lg">{details.creditScore}</div>
+            <div className="text-lg">{details.credit_score || 'Not available'}</div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-500 mb-1">Monthly Expenses</label>
+            <div className="text-lg">{details.monthly_expenses || 'Not available'}</div>
           </div>
         </div>
+        
+        {details.income_sources && details.income_sources.length > 0 && (
+          <div className="mt-6">
+            <h3 className="text-lg font-medium mb-2">Income Sources</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full border divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {details.income_sources.map((source, idx) => (
+                    <tr key={idx}>
+                      <td className="px-4 py-2 text-sm text-gray-900">{source.source_type}</td>
+                      <td className="px-4 py-2 text-sm text-gray-900 text-right">{source.income}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
+
+  if (isLoading) {
+    return (
+      <div className="bg-white min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white min-h-screen p-8">
@@ -230,69 +343,99 @@ export default function LoanDetailsPage() {
         {/* Header Section */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center space-x-4">
-            <h1 className="text-xl font-semibold">{loanDetails.borrowers.map((item) => {return `${item.firstName} ${item.lastName}`}).join(" and ")}</h1>
+            <h1 className="text-xl font-semibold">
+              {loanDetails.borrowers.map(item => `${item.first_name} ${item.last_name}`).join(" and ")}
+            </h1>
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500">
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
               <polyline points="22 4 12 14.01 9 11.01"></polyline>
             </svg>
           </div>
           <div className="flex space-x-2">
-{/*             <Button variant="outline" className="text-sm">
-              Documents
-            </Button> */}
-            {/* <Button 
-              className="bg-[#7C3AED] text-white hover:bg-[#6D28D9]"
-              onClick={() => setIsUploadDialogOpen(true)}
-            >
-              Upload Document
-            </Button> */}
+            <Button variant="outline" onClick={() => window.history.back()}>
+              Back to Applications
+            </Button>
           </div>
         </div>
+
+        {/* Error message if loading failed */}
+        {error && (
+          <div className="bg-red-100 text-red-600 p-4 rounded-md mb-6">
+            {error}
+          </div>
+        )}
 
         {/* Loan Details Section */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold mb-4">Loan Details</h2>
           <div className="bg-gray-50 p-6 rounded-lg">
-            <div className="grid grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div>
-                <div className="text-sm text-gray-500">Loan # {loanDetails.loanNumber}</div>
+                <div className="text-sm text-gray-500">Loan # {loanDetails.loan_number}</div>
                 <div className="grid grid-cols-2 gap-4 mt-4">
                   <div>
                     <div className="text-sm text-gray-500">Loan Type</div>
-                    <div className="font-medium mt-1">{loanDetails.loanType}</div>
+                    <div className="font-medium mt-1">{loanDetails.loan_type}</div>
                   </div>
                   <div>
                     <div className="text-sm text-gray-500">Loan Purpose</div>
-                    <div className="font-medium mt-1">{loanDetails.loanPurpose}</div>
+                    <div className="font-medium mt-1">{loanDetails.loan_purpose}</div>
                   </div>
                 </div>
               </div>
               <div>
                 <div className="text-sm text-gray-500">Borrower</div>
                 <div className="font-medium mt-1 flex items-center">
-                  {loanDetails.borrower}
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-1">
-                    <polyline points="6 9 12 15 18 9"></polyline>
-                  </svg>
+                  {loanDetails.primary_borrower}
                 </div>
               </div>
               <div>
                 <div className="text-sm text-gray-500">Loan Amount</div>
-                <div className="font-medium mt-1">{loanDetails.loanAmount}</div>
+                <div className="font-medium mt-1">{loanDetails.loan_amount}</div>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <div className="text-sm text-gray-500">Property Price</div>
-                  <div className="font-medium mt-1">{loanDetails.propertyPrice}</div>
+                  <div className="font-medium mt-1">{loanDetails.property_price}</div>
                 </div>
                 <div>
                   <div className="text-sm text-gray-500">LTV</div>
-                  <div className="font-medium mt-1">{loanDetails.ltv}</div>
+                  <div className="font-medium mt-1">{loanDetails.ltv}%</div>
                 </div>
                 <div>
                   <div className="text-sm text-gray-500">DTI</div>
-                  <div className="font-medium mt-1">{loanDetails.dti}</div>
+                  <div className="font-medium mt-1">{loanDetails.dti.toFixed(2)}%</div>
                 </div>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6">
+              <div>
+                <div className="text-sm text-gray-500">Status</div>
+                <div className="font-medium mt-1">
+                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                    loanDetails.status === "Approved" ? "bg-green-100 text-green-600" :
+                    loanDetails.status === "Denied" ? "bg-red-100 text-red-600" :
+                    loanDetails.status === "Pending Documents" ? "bg-yellow-100 text-yellow-600" :
+                    loanDetails.status === "Ready for Review" ? "bg-purple-100 text-purple-600" :
+                    loanDetails.status === "In Process" ? "bg-blue-100 text-blue-600" :
+                    "bg-gray-100 text-gray-600"
+                  }`}>
+                    {loanDetails.status}
+                  </span>
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">Interest Rate</div>
+                <div className="font-medium mt-1">{loanDetails.rate > 0 ? `${loanDetails.rate.toFixed(2)}%` : 'TBD'}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">Term</div>
+                <div className="font-medium mt-1">{loanDetails.loan_term} years</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">Interest Type</div>
+                <div className="font-medium mt-1">{loanDetails.loan_interest_preference}</div>
               </div>
             </div>
           </div>
@@ -307,27 +450,29 @@ export default function LoanDetailsPage() {
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                 <polyline points="22 4 12 14.01 9 11.01"></polyline>
               </svg>
-              <span className="ml-2">{loanDetails.borrowers.map((item) => {return `${item.firstName} ${item.lastName}`}).join(" and ")}</span>
+              <span className="ml-2">
+                {loanDetails.borrowers.map(item => `${item.first_name} ${item.last_name}`).join(" and ")}
+              </span>
             </div>
-            <div className="text-lg font-bold text-gray-500 mb-4">Total Income: ${getTotalIncome().toFixed(2)}</div>
-            {/* <div className="text-sm text-gray-500 mb-4">Total Income: {loanDetails.borrowers.reduce((acc, borrower) => acc + parseFloat(borrower.totalIncome), 0)}</div> */}
+            <div className="text-lg font-bold text-gray-500 mb-4">
+              Total Income: ${getTotalIncome().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
 
-            <Tabs defaultValue="firstimer-alice" value={activeTab} onValueChange={setActiveTab} className="mt-4">
+            <Tabs defaultValue="0" value={activeTab} onValueChange={setActiveTab} className="mt-4">
               <TabsList>
-                {
-                loanDetails.borrowers.map((item, idx) => (<TabsTrigger value={`${idx}`} className="text-purple-600 data-[state=active]:border-b-2 data-[state=active]:border-purple-600">
-                  {item.lastName}, {item.firstName}
-                </TabsTrigger>))
-}
-                {/* <TabsTrigger value="firstimer-alice" className="text-purple-600 data-[state=active]:border-b-2 data-[state=active]:border-purple-600">
-                  Firstimer, Alice
-                </TabsTrigger>
-                <TabsTrigger value="homeowner-john">
-                  Homeowner, John
-                </TabsTrigger> */}
+                {loanDetails.borrowers.map((item, idx) => (
+                  <TabsTrigger 
+                    key={item.id} 
+                    value={`${idx}`} 
+                    className="text-purple-600 data-[state=active]:border-b-2 data-[state=active]:border-purple-600"
+                  >
+                    {item.last_name}, {item.first_name}
+                  </TabsTrigger>
+                ))}
               </TabsList>
-              {
-                loanDetails.borrowers.map((item, idx)=>(<TabsContent value={`${idx}`}>
+              
+              {loanDetails.borrowers.map((item, idx) => (
+                <TabsContent key={item.id} value={`${idx}`}>
                   <div className="flex space-x-2 justify-end">
                     <Button 
                       className="bg-[#7C3AED] text-white hover:bg-[#6D28D9]"
@@ -337,8 +482,8 @@ export default function LoanDetailsPage() {
                     </Button>
                   </div>
                   {renderBorrowerDetails(`${idx}`)}
-                </TabsContent>))
-              }
+                </TabsContent>
+              ))}
             </Tabs>
           </div>
         </div>
@@ -406,11 +551,10 @@ export default function LoanDetailsPage() {
                 <input 
                   type="file" 
                   ref={fileInputRef} 
-                  // onChange={handleFileUpload} 
                   onChange={(e) => {
                     if (e.target.files) {
-                      handleFileUpload(e); // Call the file upload handler
-                      setSelectedFiles(Array.from(e.target.files)); // Convert FileList to an array
+                      handleFileUpload(e);
+                      setSelectedFiles(Array.from(e.target.files));
                     }
                   }}
                   className="hidden" 
@@ -428,23 +572,6 @@ export default function LoanDetailsPage() {
               
               {selectedDocument && (
                 <div className="space-y-4">
-                  {/* <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Borrower</label>
-                    <select 
-                      value={selectedDocument.borrower}
-                      onChange={(e) => updateDocumentDetails(
-                        selectedDocument.id, 
-                        e.target.value, 
-                        selectedDocument.category
-                      )}
-                      className="w-full border rounded-md p-2"
-                    >
-                      <option value="Select a borrower">Select a borrower</option>
-                      {borrowers.map(borrower => (
-                        <option key={borrower} value={borrower}>{borrower}</option>
-                      ))}
-                    </select>
-                  </div> */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                     <select 
@@ -454,7 +581,7 @@ export default function LoanDetailsPage() {
                           selectedDocument.id, 
                           selectedDocument.borrower, 
                           e.target.value
-                        )
+                        );
                         setUploadCategory(e.target.value);
                       }}
                       className="w-full border rounded-md p-2"
@@ -471,6 +598,7 @@ export default function LoanDetailsPage() {
                       onClick={() => {
                         setIsUploadDialogOpen(false);
                         setSelectedDocument(null);
+                        setSelectedFiles([]);
                       }}
                     >
                       Cancel
@@ -479,8 +607,8 @@ export default function LoanDetailsPage() {
                       className="bg-[#7C3AED] text-white hover:bg-[#6D28D9]"
                       disabled={
                         !selectedDocument || 
-                        // selectedDocument.borrower === "Select a borrower" || 
-                        selectedDocument.category === "Select a category"
+                        selectedDocument.category === "Select a category" ||
+                        selectedFiles.length === 0
                       }
                       onClick={handleFinalUpload}
                     >
