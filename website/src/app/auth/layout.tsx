@@ -8,7 +8,7 @@ export default function AuthLayout({
 }) {
   return (
     <>
-      <TopNav title="Welcome To Mortageg AI" />
+      <TopNav title="Welcome To Mortgage AI" />
       <main>
         <Container>{children}</Container>
       </main>

@@ -1,31 +1,39 @@
-import { Gauge, type LucideIcon, MessagesSquare } from "lucide-react";
+ import { 
+  Gauge,              
+  MessagesSquare,     
+  BookOpenIcon,       
+  type LucideIcon     
+} from "lucide-react";
 
 export type SiteConfig = typeof siteConfig;
+
 export type Navigation = {
   icon: LucideIcon;
   name: string;
   href: string;
+  subNav?: Navigation[];
 };
 
 export const siteConfig = {
-  title: "Mortage AI",
+  title: "Mortgage AI",
   description: "A mortgage calculator and loan management system",
 };
 
 export const navigations: Navigation[] = [
-  
   {
     icon: MessagesSquare,
     name: "Applications",
     href: "/applications",
+    subNav: [
+      {
+        icon: BookOpenIcon,
+        name: "Loan Details",
+        href: "/loan-details",
+      },
+    ],
   },
   {
-    icon: MessagesSquare,
-    name: "Loan Details",
-    href: "/loan-details",
-  },
-  {
-    icon: MessagesSquare,
+    icon: Gauge,
     name: "Rate Sheet",
     href: "/rate-sheet",
   },
@@ -36,5 +44,7 @@ export const navigations: Navigation[] = [
   },
   {
     icon: MessagesSquare,
-    name: "Auth",
-    href: "/auth",}];
+    name: "Authentication",
+    href: "/auth",
+  },
+];
