@@ -1,4 +1,3 @@
-# Moved the Client class to this file from user.py
 import os
 from random import randint
 import boto3

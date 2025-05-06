@@ -1,12 +1,9 @@
 from datetime import datetime
 import os
-import csv
 from random import randint
-from typing import Optional
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
 from dotenv import load_dotenv
-from app.models.client import Client
 from decimal import Decimal
 
 load_dotenv()

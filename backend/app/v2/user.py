@@ -1,10 +1,7 @@
 import os
-import csv
-from typing import Optional
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
 from dotenv import load_dotenv
-from app.models.client import Client
 
 load_dotenv()
 
