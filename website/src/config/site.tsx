@@ -8,8 +8,8 @@ export type Navigation = {
 };
 
 export const siteConfig = {
-  title: "VisActor Next Template",
-  description: "Template for VisActor and Next.js",
+  title: "Mortage AI",
+  description: "A mortgage calculator and loan management system",
 };
 
 export const navigations: Navigation[] = [
