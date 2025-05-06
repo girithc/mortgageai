@@ -95,7 +95,7 @@ class Application:
         self.status = status
 
         self.rate = rate
-        self.ltv = ltv if ltv != 0.0 else (loan_amount / property_price) * 100 if property_price > 0 else 0.0
+        self.ltv = round(ltv, 2) if ltv != 0.0 else round((loan_amount / property_price) * 100, 2) if property_price > 0 else 0.0
         self.dti = dti
         self.status = status
 
@@ -136,7 +136,7 @@ class Application:
         if self.total_income == 0:
             raise ValueError("Total income cannot be zero when calculating DTI.")
         # Adjust for monthly expenses and yearly income
-        self.dti = ((self.total_monthly_expenses * 12) / self.total_income) * 100
+        self.dti = round(((self.total_monthly_expenses * 12) / self.total_income) * 100, 2)
 
     def update_income_and_dti(self):
         """

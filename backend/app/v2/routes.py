@@ -13,6 +13,7 @@ from app.v2.utils.extract_text import extract_text_from_pdf
 from app.v2.utils.gpt_classify_income import classify_and_extract_income_from_text
 from app.v2.utils.gpt_extract_credit import extract_credit_from_text
 from app.v2.utils.llm_prompt_maker import rate_sheets_recommendation_prompt
+from app.v2.utils.gpt_prompt import get_openai_response
 
 
 v2api = Blueprint('v2api', __name__)
@@ -445,19 +446,26 @@ def get_new_recommendation(id):
             return jsonify({'error': 'DTI is not set'}), 400
         if application.total_income == 0:
             return jsonify({'error': 'Total income is not set'}), 400
+        
+        prompt = rate_sheets_recommendation_prompt(
+                    credit_score=primary_borrower.credit_score, 
+                    fico_score=primary_borrower.fico_score if primary_borrower.fico_score != 0 else "Unknown",
+                    dti_ratio=application.dti if application.dti != 0 else "Unknown", 
+                    income=application.total_income if application.total_income != 0 else "Unknown",
+                    loan_amount_requested=application.loan_amount if application.loan_amount != 0 else "Unknown",
+                    loan_term=application.loan_term if application.loan_term != 0 else "Unknown",
+                    loan_down_payment=application.loan_down_payment if application.loan_down_payment != 0 else "Unknown",
+                    loan_interest_preference=application.loan_interest_preference if application.loan_interest_preference else "Unknown",
+                    property_price=application.property_price if application.property_price != 0 else "Unknown",
+                    ltv_ratio=round(application.ltv, 2) if application.ltv != 0 else "Unknown"
+                )
 
-        recommendation = get_rate_sheets_response(rate_sheets_recommendation_prompt(
-            credit_score=primary_borrower.credit_score, 
-            fico_score=primary_borrower.fico_score if primary_borrower.fico_score != 0 else "Unknown",
-            dti_ratio=application.dti if application.dti != 0 else "Unknown", 
-            income=application.total_income if application.total_income != 0 else "Unknown",
-            loan_amount_requested=application.loan_amount if application.loan_amount != 0 else "Unknown",
-            loan_term=application.loan_term if application.loan_term != 0 else "Unknown",
-            loan_down_payment=application.loan_down_payment if application.loan_down_payment != 0 else "Unknown",
-            loan_interest_preference=application.loan_interest_preference if application.loan_interest_preference else "Unknown",
-            property_price=application.property_price if application.property_price != 0 else "Unknown",
-            ltv_ratio=application.ltv if application.ltv != 0 else "Unknown"
-            ))
+        try:
+            recommendation = get_rate_sheets_response(prompt)
+        except Exception as e:
+            print(f"Error getting recommendation: {e}")
+            print("Fallback to using OpenAI for recommendation...")
+            recommendation = get_openai_response(prompt)
         
         application.llm_recommendation = recommendation
         application.last_updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
