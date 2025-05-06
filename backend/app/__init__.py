@@ -3,6 +3,8 @@ from flask_cors import CORS
 from app.models.user import User, ensure_user_table_exists
 from app.models.client import Client, ensure_client_table_exists
 from app.models.application import Application, ensure_application_table_exists
+from app.new.borrower import ensure_borrower_table_exists
+from app.new.routes import v2api
 
 def create_app():
     app = Flask(__name__)
@@ -13,6 +15,7 @@ def create_app():
     ensure_user_table_exists()
     ensure_client_table_exists()
     ensure_application_table_exists()
+    ensure_borrower_table_exists()
 
     # ─── Load current user from auth_token header ───
     @app.before_request
@@ -28,5 +31,6 @@ def create_app():
         
     from .routes import main
     app.register_blueprint(main)
+    app.register_blueprint(v2api)
 
     return app
