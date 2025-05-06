@@ -3,15 +3,15 @@ from flask import Blueprint, request, jsonify
 from flask_cors import CORS
 from flask import g
 import json
-from app.new.user import User
-from app.new.application import Application
-from app.new.borrower import Borrower
+from app.v2.user import User
+from app.v2.application import Application
+from app.v2.borrower import Borrower
 
-from app.new.utils.astra_db_rate_sheets_query import get_rate_sheets_response
-from app.new.utils.extract_text import extract_text_from_pdf
-from app.new.utils.gpt_classify_income import classify_and_extract_income_from_text
-from app.new.utils.gpt_extract_credit import extract_credit_from_text
-from app.new.utils.llm_prompt_maker import rate_sheets_recommendation_prompt
+from app.v2.utils.astra_db_rate_sheets_query import get_rate_sheets_response
+from app.v2.utils.extract_text import extract_text_from_pdf
+from app.v2.utils.gpt_classify_income import classify_and_extract_income_from_text
+from app.v2.utils.gpt_extract_credit import extract_credit_from_text
+from app.v2.utils.llm_prompt_maker import rate_sheets_recommendation_prompt
 
 
 v2api = Blueprint('v2api', __name__)
