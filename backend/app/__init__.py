@@ -1,7 +1,7 @@
 from flask import Flask, g, request
 from flask_cors import CORS
 from app.models.client import Client, ensure_client_table_exists
-from app.v2.user import ensure_user_table_exists
+from app.v2.user import ensure_user_table_exists, User
 from app.v2.application import ensure_application_table_exists
 from app.v2.borrower import ensure_borrower_table_exists
 from app.v2.routes import v2api

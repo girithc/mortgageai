@@ -47,13 +47,21 @@ def ensure_user_table_exists():
 
 # Update the User class to replace client_names with application_id
 class User:
-    def __init__(self, username, name, application_id=None):
+    def __init__(self, username, name, password=None, application_id=None):
         self.username = username
         self.name = name
+        self.password = password
         self.application_id = application_id if application_id else []
 
     def add_application(self, application_id):
         self.application_id.append(application_id)
+
+    def update(self, data):
+        print(data)
+        if "name" in data:
+            self.name = data["name"]
+        if "password" in data and data["password"].strip() != "":
+            self.password = data["password"]
 
     def save_to_dynamodb(self):
         table = dynamodb.Table(USER_TABLE)
@@ -62,6 +70,7 @@ class User:
                 Item={
                     'username': self.username,
                     'name': self.name,
+                    'password': self.password,
                     'application_id': self.application_id
                 }
             )
@@ -75,7 +84,7 @@ class User:
             response = table.get_item(Key={'username': username})
             if 'Item' in response:
                 data = response['Item']
-                return User(data['username'], data['name'], data.get('application_id', []))
+                return User(data['username'], data['name'], application_id=data.get('application_id', []), password=data.get('password', ""))
             return None
         except ClientError as e:
             print(f"Error loading user from DynamoDB: {e}")

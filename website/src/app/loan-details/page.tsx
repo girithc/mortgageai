@@ -12,6 +12,11 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+import ReactMarkdown from 'react-markdown';
+
+import { ChevronLeft, Brain } from "lucide-react"
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+
 type UploadedDocument = {
   id: string;
   file: File;
@@ -97,9 +102,61 @@ export default function LoanDetailsPage() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
-  
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isFetchingRecommendation, setIsFetchingRecommendation] = useState(false);
 
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  
+  // const fetchNewRecommendation = async () => {
+  //   try {
+  //     const base_url = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000";
+  //     const response = await fetch(`${base_url}/api/applications/${loanDetails.loan_number}/new-recommendation`, {
+  //       method: "GET",
+  //     });
+  
+  //     if (!response.ok) {
+  //       throw new Error(`HTTP error! Status: ${response.status}`);
+  //     }
+  
+  //     const data = await response.json();
+  //     console.log("New recommendation fetched:", data);
+  
+  //     // Update the recommendation in the state
+  //     setLoanDetails(prev => ({
+  //       ...prev,
+  //       llm_recommendation: data.llm_recommendation || "No insight yet",
+  //     }));
+  //   } catch (error) {
+  //     console.error("Error fetching new recommendation:", error);
+  //     alert("Failed to fetch new recommendation. Please try again.");
+  //   }
+  // };
+  const fetchNewRecommendation = async () => {
+    setIsFetchingRecommendation(true); // Set loading state to true
+    try {
+      const base_url = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000";
+      const response = await fetch(`${base_url}/api/applications/${loanDetails.loan_number}/new-recommendation`, {
+        method: "GET",
+      });
+  
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+  
+      const data = await response.json();
+      console.log("Recommendation fetched:", data);
+  
+      // Update the recommendation in the state
+      setLoanDetails(prev => ({
+        ...prev,
+        llm_recommendation: data.llm_recommendation || "No insight yet",
+      }));
+    } catch (error) {
+      console.error("Error fetching recommendation:", error);
+      alert("Failed to fetch recommendation. Please try again.");
+    } finally {
+      setIsFetchingRecommendation(false); // Reset loading state
+    }
+  };
   const getTotalIncome = () => {
     let totalIncome = 0;
     try {
@@ -207,7 +264,7 @@ export default function LoanDetailsPage() {
             endpoint = `${base_url}/api/borrower/read-credit-report`;
             break;
           case "Asset":
-            // If you implement an asset endpoint in the future
+            // If an asset endpoint is implemented in the future
             endpoint = `${base_url}/api/borrower/read-asset`;
             break;
           default:
@@ -341,7 +398,7 @@ export default function LoanDetailsPage() {
     <div className="bg-white min-h-screen p-8">
       <div className="container mx-auto">
         {/* Header Section */}
-        <div className="flex justify-between items-center mb-6">
+        {/* <div className="flex justify-between items-center mb-6">
           <div className="flex items-center space-x-4">
             <h1 className="text-xl font-semibold">
               {loanDetails.borrowers.map(item => `${item.first_name} ${item.last_name}`).join(" and ")}
@@ -356,7 +413,7 @@ export default function LoanDetailsPage() {
               Back to Applications
             </Button>
           </div>
-        </div>
+        </div> */}
 
         {/* Error message if loading failed */}
         {error && (
@@ -367,6 +424,11 @@ export default function LoanDetailsPage() {
 
         {/* Loan Details Section */}
         <div className="mb-8">
+          <div className="flex space-x-2">
+            <Button variant="outline" onClick={() => window.history.back()}>          
+              <ChevronLeft /> 
+            </Button>
+          </div>
           <h2 className="text-2xl font-bold mb-4">Loan Details</h2>
           <div className="bg-gray-50 p-6 rounded-lg">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -487,9 +549,54 @@ export default function LoanDetailsPage() {
             </Tabs>
           </div>
         </div>
+        {/* <div className="mb-8">
+          <h2 className="text-2xl font-bold mb-4">Recommendation</h2>
+          <div className="bg-gray-50 p-6 rounded-lg">
+            <div className="mb-4">
+            <Card style={{height: "300px", overflowY:"scroll", scrollbarWidth:"none"}}>
+              <CardHeader>
+                <Brain></Brain>
+              </CardHeader>
+              <CardContent>   
+                <ReactMarkdown>{loanDetails.llm_recommendation || "No insight yet"}</ReactMarkdown>
+              </CardContent>
+            </Card>
+            </div>
+          </div>
+        </div> */}
 
-        {/* Documents Table */}
         <div className="mb-8">
+          <h2 className="text-2xl font-bold mb-4">Recommendation</h2>
+          <div className="bg-gray-50 p-6 rounded-lg">
+            <div className="mb-4">
+              <Card style={{ height: "300px", overflowY: "scroll", scrollbarWidth: "none" }}>
+                <CardHeader>
+                  <Brain />
+                </CardHeader>
+                <CardContent>
+                  {isFetchingRecommendation ? (
+                    <div className="flex justify-center items-center h-full">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                    </div>
+                  ) : (
+                    <ReactMarkdown>{loanDetails.llm_recommendation || "No insight yet"}</ReactMarkdown>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+            <div className="flex justify-end">
+              <Button
+                className="bg-[#7C3AED] text-white hover:bg-[#6D28D9]"
+                onClick={fetchNewRecommendation}
+                disabled={isFetchingRecommendation} // Disable button while loading
+              >
+                {isFetchingRecommendation ? "Loading..." : "Get Recommendation"}
+              </Button>
+            </div>
+          </div>
+        </div>
+        {/* Documents Table */}
+        {/* <div className="mb-8">
           <h2 className="text-2xl font-bold mb-4">Documents</h2>
           <div className="border rounded-lg overflow-hidden shadow-sm">
             <table className="w-full">
@@ -536,7 +643,7 @@ export default function LoanDetailsPage() {
               </tbody>
             </table>
           </div>
-        </div>
+        </div> */}
 
         {/* Upload Document Dialog */}
         <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>

@@ -24,27 +24,27 @@ export const navigations: Navigation[] = [
     icon: MessagesSquare,
     name: "Applications",
     href: "/applications",
-    subNav: [
-      {
-        icon: BookOpenIcon,
-        name: "Loan Details",
-        href: "/loan-details",
-      },
-    ],
+    // subNav: [
+    //   {
+    //     icon: BookOpenIcon,
+    //     name: "Loan Details",
+    //     href: "/loan-details",
+    //   },
+    // ],
   },
   {
     icon: Gauge,
     name: "Rate Sheet",
     href: "/rate-sheet",
   },
-  {
-    icon: MessagesSquare,
-    name: "Profile",
-    href: "/profile",
-  },
-  {
-    icon: MessagesSquare,
-    name: "Authentication",
-    href: "/auth",
-  },
+  // {
+  //   icon: MessagesSquare,
+  //   name: "Profile",
+  //   href: "/profile",
+  // },
+  // {
+  //   icon: MessagesSquare,
+  //   name: "Authentication",
+  //   href: "/auth",
+  // },
 ];

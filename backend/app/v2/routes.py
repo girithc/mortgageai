@@ -19,14 +19,16 @@ from app.v2.utils.gpt_prompt import get_openai_response
 v2api = Blueprint('v2api', __name__)
 CORS(v2api)
 
-USER_OVERRIDE = "admin"
+USER_OVERRIDE = ""
 
 @v2api.route('/api/user', methods=['POST'])
 def create_user():
     username = request.form.get('username')
     name = request.form.get('name')
-    if not username or not name:
-        return jsonify({'error': 'Username and name are required'}), 400
+    password = request.form.get('password')
+
+    if not username or not name or not password:
+        return jsonify({'error': 'Username and name and password are required'}), 400
     
     try:
         # Check if user already exists
@@ -35,13 +37,64 @@ def create_user():
             return jsonify({'error': 'User already exists'}), 400
 
         # Create new user
-        user = User(username=username, name=name)
+        user = User(username=username, name=name, password=password)
         user.save_to_dynamodb()
 
         return jsonify({'message': 'User created successfully', 'user': {'username': user.username, 'name': user.name}}), 201
 
     except Exception as e:
         print(f"Error creating user: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@v2api.route('/api/user/login', methods=['POST'])
+def login():
+    username = request.form.get('username')
+    password = request.form.get('password')
+
+    if not username or not password:
+        return jsonify({'error': 'Username and password are required'}), 400
+    
+    try:
+        # Check if user already exists
+        existing_user = User.load_from_dynamodb(username)
+        if not existing_user:
+            return jsonify({'error': 'User does not exists'}), 400
+        if existing_user.password == password:
+            return jsonify({'user': {'username': existing_user.username, 'name': existing_user.name}}), 200
+        else:
+            return jsonify({'error': 'Invalid username / password'}), 400
+
+    except Exception as e:
+        print(f"Error creating user: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@v2api.route('/api/user', methods=['PUT'])
+def update_user():
+    name = request.form.get('name')
+    password = request.form.get('password')
+
+    if USER_OVERRIDE == "":
+        # Authentication check
+        if not getattr(g, 'current_user', None):
+            return jsonify({'error': 'Unauthorized'}), 401
+        # Use authenticated user
+        user_id = g.current_user.username
+    else:
+        # Use admin user
+        user_id = USER_OVERRIDE
+   
+    try:
+        user = User.load_from_dynamodb(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 400
+
+        user.update({"name": name, "password": password})
+        user.save_to_dynamodb()
+
+        return jsonify({'user': {'username': user.username, 'name': user.name}}), 200
+
+    except Exception as e:
+        print(f"Error updating user: {e}")
         return jsonify({'error': str(e)}), 500
 
 @v2api.route('/api/applications', methods=['POST'])
@@ -478,7 +531,7 @@ def get_new_recommendation(id):
     except Exception as e:      
         print(f"Error getting client recommendation: {e}")
         return jsonify({'error': str(e)}), 500
-    
+
 @v2api.route('/api/applications/<id>/recommendation', methods=['GET'])
 def get_recommendation(id):
     try:

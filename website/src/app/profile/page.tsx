@@ -6,8 +6,60 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User, Mail, Key, Save } from "lucide-react";
+import { useState } from "react";
 
 export default function ProfilePage() {
+  let user = JSON.parse(localStorage.getItem("user") || "{}")
+  const [name, setName] = useState(user.name)
+  const [password, setPassword] = useState("")
+
+  const handleSubmit = async() => {
+    const base_url = "http://127.0.0.1:5000";
+    try {
+         
+      // Create a FormData object
+      const formData = new FormData();
+      
+      // Validate and add required fields
+      if (!name) {
+        alert("Name can't be empty");
+        return;
+      }
+      
+      formData.append("name", name);
+      formData.append("password", password);
+
+      // Make the HTTP request
+      const response = await fetch(`${base_url}/api/user`, {
+        method: "PUT",
+        body: formData,
+        headers: {
+          "Authorization": `Bearer ${user.username}`
+        }
+      });
+
+      // Parse the JSON response
+      const data = await response.json();
+      console.log("Response from server:", data);
+
+      // Check if the request was successful
+      if (!response.ok) {
+        if (response.status === 400) {
+          // Handle unauthorized
+         alert(data.error)
+        }
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      else {
+        localStorage.setItem("user", JSON.stringify(data.user))
+        alert("Profile updated successfully")
+      }
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      alert("Failed to submit application. Please try again.");
+    }
+  }
+
   return (
     <section className="max-w-xl mx-auto p-6 min-h-screen flex items-center justify-center">
       <Card className="w-full shadow-lg border-0">
@@ -33,6 +85,10 @@ export default function ProfilePage() {
               <Input 
                 id="name" 
                 placeholder="John Doe" 
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value)
+                }}
                 className="pl-10 py-2 bg-slate-50 focus:bg-white transition-all" 
               />
               <User size={16} className="absolute left-3 top-3 text-slate-400" />
@@ -46,7 +102,9 @@ export default function ProfilePage() {
                 id="email" 
                 type="email" 
                 placeholder="john@example.com" 
+                value={user.username}
                 className="pl-10 py-2 bg-slate-50 focus:bg-white transition-all"
+                disabled
               />
               <Mail size={16} className="absolute left-3 top-3 text-slate-400" />
             </div>
@@ -58,6 +116,10 @@ export default function ProfilePage() {
               <Input 
                 id="password" 
                 type="password" 
+                value={password}
+                onChange={(e)=> {
+                  setPassword(e.target.value)
+                }}
                 placeholder="••••••••" 
                 className="pl-10 py-2 bg-slate-50 focus:bg-white transition-all"
               />
@@ -67,7 +129,7 @@ export default function ProfilePage() {
         </CardContent>
 
         <CardFooter className="pt-2 pb-6 px-6">
-          <Button className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow transition-all">
+          <Button className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow transition-all" onClick={() => {handleSubmit()}}>
             <Save size={16} className="mr-2" />
             Update Profile
           </Button>
