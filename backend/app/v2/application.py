@@ -113,6 +113,36 @@ class Application:
         self.last_updated = last_updated
         self.created_at = created_at
 
+    def to_dict(self):
+        """
+        Convert the Application instance to a dictionary for JSON serialization.
+        """
+        return {
+            'id': self.id,
+            'loan_type': self.loan_type,
+            'loan_amount': self.loan_amount,
+            'loan_purpose': self.loan_purpose,
+            'property_price': self.property_price,
+            'property_address': self.property_address,
+            'property_type': self.property_type,
+            'occupancy_type': self.occupancy_type,
+            'status': self.status,
+            'rate': self.rate,
+            'ltv': self.ltv,
+            'dti': self.dti,
+            'primary_borrower_id': self.primary_borrower_id,
+            'co_borrowers_id': self.co_borrowers_id,
+            'loan_term': self.loan_term,
+            'loan_down_payment': self.loan_down_payment,
+            'loan_interest_preference': self.loan_interest_preference,
+            'llm_recommendation': self.llm_recommendation,
+            'total_income': self.total_income,
+            'total_monthly_expenses': self.total_monthly_expenses,
+            'last_updated': self.last_updated,
+            'created_at': self.created_at
+        }
+
+
     def add_co_borrower(self, co_borrower_id):
         self.co_borrowers_id.append(co_borrower_id)
 
@@ -249,45 +279,45 @@ class Application:
     # Patch for application.py
 # Update the get_all_applications method to use the correct field names
 
-@staticmethod
-def get_all_applications() -> list['Application']:
-    """
-    Scan the entire APPLICATION_TABLE and return a list of Application instances.
-    """
-    table = dynamodb.Table(APPLICATION_TABLE)
-    try:
-        resp = table.scan()
-        items = resp.get('Items', [])
-        return [
-            Application(
-                id=item['id'],
-                loan_type=item.get('loan_type', item.get('loanType', 'CONVENTIONAL')),  # Handle both field names
-                loan_amount=float(item.get('loan_amount', item.get('loanAmount', 0.0))),
-                loan_purpose=item.get('loan_purpose', item.get('loanPurpose', 'PURCHASE')),
-                property_price=float(item.get('property_price', item.get('propertyPrice', 0.0))),
-                property_address=item.get('property_address', item.get('propertyAddress', '')),
-                property_type=item.get('property_type', item.get('propertyType', 'SINGLE_FAMILY')),
-                occupancy_type=item.get('occupancy_type', item.get('occupancyType', 'PRIMARY')),
-                ltv=float(item.get('ltv', 0.0)),
-                dti=float(item.get('dti', 0.0)),
-                rate=float(item.get('rate', 0.0)),
-                status=item.get('status', 'INIT'),
-                primary_borrower_id=item.get('primary_borrower_id', ''),
-                co_borrowers_id=item.get('co_borrowers_id', []),
-                loan_term=item.get('loan_term', 30),
-                loan_down_payment=float(item.get('loan_down_payment', 0.0)),
-                loan_interest_preference=item.get('loan_interest_preference', 'FIXED'),
-                llm_recommendation=item.get('llm_recommendation', ''),
-                total_income=float(item.get('total_income', 0.0)),
-                total_monthly_expenses=float(item.get('total_monthly_expenses', 0.0)),
-                last_updated=item.get('last_updated', datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
-                created_at=item.get('created_at', datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-            )
-            for item in items
-        ]
-    except ClientError as e:
-        print(f"Error scanning applications table: {e}")
-        return []
+    @staticmethod
+    def get_all_applications() -> list['Application']:
+        """
+        Scan the entire APPLICATION_TABLE and return a list of Application instances.
+        """
+        table = dynamodb.Table(APPLICATION_TABLE)
+        try:
+            resp = table.scan()
+            items = resp.get('Items', [])
+            return [
+                Application(
+                    id=item['id'],
+                    loan_type=item.get('loan_type', item.get('loanType', 'CONVENTIONAL')),  # Handle both field names
+                    loan_amount=float(item.get('loan_amount', item.get('loanAmount', 0.0))),
+                    loan_purpose=item.get('loan_purpose', item.get('loanPurpose', 'PURCHASE')),
+                    property_price=float(item.get('property_price', item.get('propertyPrice', 0.0))),
+                    property_address=item.get('property_address', item.get('propertyAddress', '')),
+                    property_type=item.get('property_type', item.get('propertyType', 'SINGLE_FAMILY')),
+                    occupancy_type=item.get('occupancy_type', item.get('occupancyType', 'PRIMARY')),
+                    ltv=float(item.get('ltv', 0.0)),
+                    dti=float(item.get('dti', 0.0)),
+                    rate=float(item.get('rate', 0.0)),
+                    status=item.get('status', 'INIT'),
+                    primary_borrower_id=item.get('primary_borrower_id', ''),
+                    co_borrowers_id=item.get('co_borrowers_id', []),
+                    loan_term=item.get('loan_term', 30),
+                    loan_down_payment=float(item.get('loan_down_payment', 0.0)),
+                    loan_interest_preference=item.get('loan_interest_preference', 'FIXED'),
+                    llm_recommendation=item.get('llm_recommendation', ''),
+                    total_income=float(item.get('total_income', 0.0)),
+                    total_monthly_expenses=float(item.get('total_monthly_expenses', 0.0)),
+                    last_updated=item.get('last_updated', datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+                    created_at=item.get('created_at', datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                )
+                for item in items
+            ]
+        except ClientError as e:
+            print(f"Error scanning applications table: {e}")
+            return []
 
     @staticmethod
     def get_application_by_borrower_id(borrower_id):
@@ -301,31 +331,3 @@ def get_all_applications() -> list['Application']:
                 return application
         return None
 
-    def to_dict(self):
-        """
-        Convert the Application instance to a dictionary for JSON serialization.
-        """
-        return {
-            'id': self.id,
-            'loan_type': self.loan_type,
-            'loan_amount': self.loan_amount,
-            'loan_purpose': self.loan_purpose,
-            'property_price': self.property_price,
-            'property_address': self.property_address,
-            'property_type': self.property_type,
-            'occupancy_type': self.occupancy_type,
-            'status': self.status,
-            'rate': self.rate,
-            'ltv': self.ltv,
-            'dti': self.dti,
-            'primary_borrower_id': self.primary_borrower_id,
-            'co_borrowers_id': self.co_borrowers_id,
-            'loan_term': self.loan_term,
-            'loan_down_payment': self.loan_down_payment,
-            'loan_interest_preference': self.loan_interest_preference,
-            'llm_recommendation': self.llm_recommendation,
-            'total_income': self.total_income,
-            'total_monthly_expenses': self.total_monthly_expenses,
-            'last_updated': self.last_updated,
-            'created_at': self.created_at
-        }
