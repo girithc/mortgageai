@@ -149,8 +149,13 @@ export default function ApplicationPage() {
       // API base URL - should be environment variable in production
       const base_url = "http://127.0.0.1:5000";
       
+      let user = JSON.parse(localStorage.getItem("user") || "{}")
       // Make the HTTP request - using the endpoint that works with your backend
-      const response = await fetch(`${base_url}/api/applications`);
+      const response = await fetch(`${base_url}/api/applications`, {
+        headers: {
+          "Authorization": "Bearer " + user.username
+        }
+      } );
         
       // Check if the request was successful
       if (!response.ok) {
@@ -266,7 +271,8 @@ export default function ApplicationPage() {
       }
 
       // Include auth token in headers if needed
-      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || user.username;
       const headers = {};
       if (token) {
         Object.assign(headers, { 'Authorization': `Bearer ${token}` });
@@ -315,13 +321,13 @@ export default function ApplicationPage() {
 
   return (
     <main className="container mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center">
+      {/* <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Loan Pipeline</h2>
         <Button onClick={handleLogout} variant="outline" className="flex items-center gap-2">
           <LogOut className="w-4 h-4" />
           Logout
         </Button>
-      </div>
+      </div> */}
 
       {/* Error message if loading failed */}
       {error && (

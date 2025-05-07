@@ -15,16 +15,106 @@ export default function AuthPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!isLogin && password !== confirmPassword) {
-      alert("Passwords do not match!");
-      return;
+
+    // API base URL - should be environment variable in production
+    const base_url = "http://127.0.0.1:5000";
+
+    if (!isLogin) {
+      if (password !== confirmPassword) {
+        alert("Passwords do not match!");
+        return;
+      }
+      else {
+        try {
+         
+          // Create a FormData object
+          const formData = new FormData();
+          
+          // Validate and add required fields
+          if (!email || !password) {
+            alert("Please fill in all required fields");
+            return;
+          }
+          
+          formData.append("username", email);
+          formData.append("password", password);
+          formData.append("name", "Loan Officer");
+    
+          // Make the HTTP request
+          const response = await fetch(`${base_url}/api/user`, {
+            method: "POST",
+            body: formData
+          });
+    
+          // Parse the JSON response
+          const data = await response.json();
+          console.log("Response from server:", data);
+    
+          // Check if the request was successful
+          if (!response.ok) {
+            if (response.status === 400) {
+              // Handle unauthorized
+             alert(data.error)
+            }
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+          else {
+            localStorage.setItem("user", JSON.stringify(data.user))
+            window.location.href = "/applications";
+          }
+        } catch (error) {
+          console.error("Error submitting form:", error);
+          alert("Failed to submit application. Please try again.");
+        }
+      }
+    }
+    else {
+      try{
+        // Create a FormData object
+        const formData = new FormData();
+            
+        // Validate and add required fields
+        if (!email || !password) {
+          alert("Please fill in all required fields");
+          return;
+        }
+        
+        formData.append("username", email);
+        formData.append("password", password);
+
+        // Make the HTTP request
+        const response = await fetch(`${base_url}/api/user/login`, {
+          method: "POST",
+          body: formData
+        });
+
+        // Parse the JSON response
+        const data = await response.json();
+        console.log("Response from server:", data);
+
+        // Check if the request was successful
+        if (!response.ok) {
+          if (response.status === 400) {
+            // Handle unauthorized
+          alert(data.error)
+          }
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        else {
+          localStorage.setItem("user", JSON.stringify(data.user))
+          window.location.href = "/applications";
+        }
+      } catch (error) {
+        console.error("Error submitting form:", error);
+        alert("Failed to submit application. Please try again.");
+      }
     }
 
-    console.log(isLogin ? "Logging in with" : "Registering with", email, password);
+    // console.log(isLogin ? "Logging in with" : "Registering with", email, password);
 
-    setTimeout(() => {
-      window.location.href = "/applications"; // Mock navigation
-    }, 1000);
+    // setTimeout(() => {
+    //   window.location.href = "/applications"; // Mock navigation
+    // }, 1000);
   };
 
   const handleGoogleSignIn = () => {
@@ -46,7 +136,7 @@ export default function AuthPage() {
         <div className="z-10 flex flex-col items-center justify-center p-8">
           <h2 className="text-3xl mb-4">{isLogin ? "New here?" : "Already have an account?"}</h2>
           <p className="text-center mb-8">
-            {isLogin ? "Sign Up and Start Ordering!" : "Sign in and continue!"}
+            {isLogin ? "Sign Up and Start!" : "Sign in and continue!"}
           </p>
           <Button
             variant="outline"
