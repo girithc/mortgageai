@@ -9,9 +9,9 @@
 ### 2. Install Dependencies
 `pip install -r requirements.txt`
 
-### 2a. Add OpenAI API Key
+### 2a. Add AWS access key for local testing
 `nano .env`
-- Paste OpenAI API key to `OPENAI_API_KEY`
+- Paste AWS access key to `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`
 
 ### 3. Run the Flask App
 `flask run`
