@@ -149,7 +149,7 @@ export default function ApplicationPage() {
       // API base URL - should be environment variable in production
       const base_url = "http://127.0.0.1:5000";
       
-      let user = JSON.parse(localStorage.getItem("user") || "{}")
+      let user = { username: 'admin' }
       // Make the HTTP request - using the endpoint that works with your backend
       const response = await fetch(`${base_url}/api/applications`, {
         headers: {
@@ -183,8 +183,6 @@ export default function ApplicationPage() {
 
   const handleLogout = () => {
     // Clear auth tokens
-    localStorage.removeItem('authToken');
-    sessionStorage.removeItem('authToken');
     setIsAuthenticated(false);
     router.push('/');
   };
@@ -271,8 +269,8 @@ export default function ApplicationPage() {
       }
 
       // Include auth token in headers if needed
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
-      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || user.username;
+      const user = { username: 'admin' };
+      const token = user.username;
       const headers = {};
       if (token) {
         Object.assign(headers, { 'Authorization': `Bearer ${token}` });

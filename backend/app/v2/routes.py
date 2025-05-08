@@ -45,6 +45,8 @@ def create_user():
     except Exception as e:
         print(f"Error creating user: {e}")
         return jsonify({'error': str(e)}), 500
+    
+
 
 @v2api.route('/api/user/login', methods=['POST'])
 def login():

@@ -9,7 +9,7 @@ import { User, Mail, Key, Save } from "lucide-react";
 import { useState } from "react";
 
 export default function ProfilePage() {
-  let user = JSON.parse(localStorage.getItem("user") || "{}")
+  let user = { username: "admin" };
   const [name, setName] = useState(user.name)
   const [password, setPassword] = useState("")
 
@@ -51,7 +51,6 @@ export default function ProfilePage() {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
       else {
-        localStorage.setItem("user", JSON.stringify(data.user))
         alert("Profile updated successfully")
       }
     } catch (error) {

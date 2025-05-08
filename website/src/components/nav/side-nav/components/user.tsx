@@ -8,7 +8,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 export default function User() {
-  let user = JSON.parse(localStorage.getItem("user") || "{}")
+  let user = { username: "admin" };
+
   return (
     <div className="flex h-16 items-center border-b border-border px-2">
       <div className="flex w-full items-center justify-between rounded-md px-2 py-1 hover:bg-slate-200 dark:hover:bg-slate-800">
@@ -34,7 +35,7 @@ export default function User() {
             <DropdownMenuItem onClick={() => {window.location.href = `/profile`}}>
               Profile
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => {localStorage.removeItem("user"); window.location.href = `/auth`}}>
+            <DropdownMenuItem onClick={() => {window.location.href = `/auth`}}>
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>

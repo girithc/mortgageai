@@ -15,6 +15,7 @@ export default function AuthPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    let user = { username: "admin" };
 
     // API base URL - should be environment variable in production
     const base_url = "http://127.0.0.1:5000";
@@ -59,7 +60,8 @@ export default function AuthPage() {
             throw new Error(`HTTP error! Status: ${response.status}`);
           }
           else {
-            localStorage.setItem("user", JSON.stringify(data.user))
+            // Removed localStorage setItem
+            // localStorage.setItem("user", JSON.stringify(data.user))
             window.location.href = "/applications";
           }
         } catch (error) {
@@ -101,7 +103,8 @@ export default function AuthPage() {
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
         else {
-          localStorage.setItem("user", JSON.stringify(data.user))
+          // Removed localStorage setItem
+          // localStorage.setItem("user", JSON.stringify(data.user))
           window.location.href = "/applications";
         }
       } catch (error) {
